@@ -1,22 +1,742 @@
+{% load static %}
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
-    <title>SwipeCull - Home</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SwipeCull — Dashboard</title>
+    <meta name="description" content="Triage your cloud photos with SwipeCull. Keep what matters, trash the rest.">
+
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+                    },
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* ── Scrollbar styling ── */
+        .custom-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .custom-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 999px;
+        }
+
+        /* ── Swipe animation ── */
+        @keyframes swipe-left {
+            to {
+                transform: translateX(-120%) rotate(-12deg);
+                opacity: 0;
+            }
+        }
+
+        @keyframes swipe-right {
+            to {
+                transform: translateX(120%) rotate(12deg);
+                opacity: 0;
+            }
+        }
+
+        .swipe-left {
+            animation: swipe-left 0.35s ease-in forwards;
+        }
+
+        .swipe-right {
+            animation: swipe-right 0.35s ease-in forwards;
+        }
+
+        /* ── Card drag ── */
+        #triage-card {
+            transition: transform 0.08s ease, box-shadow 0.08s ease;
+            cursor: grab;
+        }
+
+        #triage-card:active {
+            cursor: grabbing;
+        }
+
+        /* ── Subtle button press ── */
+        .action-btn {
+            transition: transform 0.1s ease, box-shadow 0.1s ease;
+        }
+
+        .action-btn:active {
+            transform: scale(0.96);
+        }
+
+        /* ── Progress bar animation ── */
+        @keyframes fill {
+            from {
+                width: 0%;
+            }
+
+            to {
+                width: var(--target-w);
+            }
+        }
+
+        .progress-fill {
+            animation: fill 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
+        /* ── Hint overlay ── */
+        #hint-keep,
+        #hint-trash {
+            opacity: 0;
+            transition: opacity 0.15s ease;
+            pointer-events: none;
+        }
+    </style>
 </head>
 
-<body class="bg-slate-50 min-h-screen">
-    <nav class="bg-white shadow p-4 flex justify-between items-center">
-        <h1 class="text-xl font-bold text-blue-600">SwipeCull</h1>
-        <a href="{% url 'login' %}" class="text-red-500">Logout</a>
-    </nav>
-    <div class="flex items-center justify-center mt-20">
-        <div class="text-center p-20 border-4 border-dashed border-gray-300 rounded-2xl">
-            <h1 class="text-5xl font-black text-gray-400">HOME SCREEN</h1>
-            <p class="mt-4 text-gray-500">Photo Triage Dashboard Coming Soon</p>
+<body class="bg-slate-50 min-h-screen font-sans text-slate-900 antialiased">
+
+    <!-- ════════════════════════════════════════
+     NAVBAR
+════════════════════════════════════════ -->
+    <header class="bg-white border-b border-slate-200 h-14 flex items-center px-5 justify-between sticky top-0 z-30">
+
+        <!-- Logo -->
+        <div class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded-lg bg-slate-900 flex items-center justify-center">
+                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2.2"
+                    viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 7h18M3 12h18M3 17h18" />
+                </svg>
+            </div>
+            <span class="text-[15px] font-bold tracking-tight text-slate-900">SwipeCull</span>
+        </div>
+
+        <!-- Right: Connection badge + Avatar -->
+        <div class="flex items-center gap-3">
+
+            <!-- Google Drive status pill -->
+            <div id="drive-status"
+                class="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-medium px-3 py-1 rounded-full">
+                <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                <svg class="w-3 h-3" viewBox="0 0 48 48" fill="none">
+                    <path d="M6 38l8-14 8 14H6z" fill="#34a853" />
+                    <path d="M16 10l8 14 8-14H16z" fill="#4285f4" />
+                    <path d="M26 38l8-14 8 14H26z" fill="#fbbc05" />
+                </svg>
+                Drive Connected
+            </div>
+
+            <!-- Logout -->
+            <a href="{% url 'login' %}"
+                class="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-900 transition px-2 py-1 rounded-md hover:bg-slate-100">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1" />
+                </svg>
+                Logout
+            </a>
+
+            <!-- Avatar -->
+            <div
+                class="w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center text-white text-xs font-semibold select-none">
+                {{ request.user.username|first|upper }}
+            </div>
+        </div>
+    </header>
+
+
+    <main class="flex h-[calc(100vh-56px)] overflow-hidden">
+
+        <!-- ── LEFT SIDEBAR ─────────────────────── -->
+        <aside
+            class="hidden lg:flex flex-col w-60 border-r border-slate-200 bg-white overflow-y-auto custom-scroll flex-shrink-0">
+
+            <div class="p-4 border-b border-slate-100">
+                <p class="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-3">Cloud Folders</p>
+
+                <!-- Folder list -->
+                <nav class="space-y-0.5" id="folder-list">
+
+                    <!-- Active folder -->
+                    <button onclick="selectFolder(this)" data-folder="Camera Roll"
+                        class="folder-item w-full flex items-center gap-2.5 px-3 py-2 rounded-lg bg-slate-100 text-slate-900 text-sm font-medium text-left">
+                        <svg class="w-4 h-4 text-slate-500 flex-shrink-0" fill="none" stroke="currentColor"
+                            stroke-width="1.8" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M3 7a2 2 0 012-2h3.172a2 2 0 011.414.586l1.828 1.828A2 2 0 0012.828 8H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                        </svg>
+                        <span class="truncate">Camera Roll</span>
+                        <span class="ml-auto text-[10px] text-slate-400 font-normal">120</span>
+                    </button>
+
+                    <button onclick="selectFolder(this)" data-folder="Screenshots"
+                        class="folder-item w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-slate-50 text-slate-600 text-sm text-left transition">
+                        <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor"
+                            stroke-width="1.8" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M3 7a2 2 0 012-2h3.172a2 2 0 011.414.586l1.828 1.828A2 2 0 0012.828 8H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                        </svg>
+                        <span class="truncate">Screenshots</span>
+                        <span class="ml-auto text-[10px] text-slate-400 font-normal">47</span>
+                    </button>
+
+                    <button onclick="selectFolder(this)" data-folder="Shared with Me"
+                        class="folder-item w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-slate-50 text-slate-600 text-sm text-left transition">
+                        <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor"
+                            stroke-width="1.8" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M3 7a2 2 0 012-2h3.172a2 2 0 011.414.586l1.828 1.828A2 2 0 0012.828 8H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                        </svg>
+                        <span class="truncate">Shared with Me</span>
+                        <span class="ml-auto text-[10px] text-slate-400 font-normal">33</span>
+                    </button>
+
+                    <button onclick="selectFolder(this)" data-folder="Vacation 2024"
+                        class="folder-item w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-slate-50 text-slate-600 text-sm text-left transition">
+                        <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor"
+                            stroke-width="1.8" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M3 7a2 2 0 012-2h3.172a2 2 0 011.414.586l1.828 1.828A2 2 0 0012.828 8H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                        </svg>
+                        <span class="truncate">Vacation 2024</span>
+                        <span class="ml-auto text-[10px] text-slate-400 font-normal">88</span>
+                    </button>
+
+                    <button onclick="selectFolder(this)" data-folder="iCloud Sync"
+                        class="folder-item w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-slate-50 text-slate-600 text-sm text-left transition">
+                        <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor"
+                            stroke-width="1.8" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M3 7a2 2 0 012-2h3.172a2 2 0 011.414.586l1.828 1.828A2 2 0 0012.828 8H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                        </svg>
+                        <span class="truncate">iCloud Sync</span>
+                        <span class="ml-auto text-[10px] text-slate-400 font-normal">215</span>
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Trashed Items -->
+            <div class="p-4 mt-auto">
+                <button id="trash-review-btn"
+                    class="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-red-200 bg-red-50 text-red-600 text-sm font-medium hover:bg-red-100 transition">
+                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="1.8"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Trashed This Session
+                    <span id="trash-count-badge"
+                        class="ml-auto bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">0</span>
+                </button>
+            </div>
+        </aside>
+
+
+        <section
+            class="flex-1 flex flex-col items-center justify-center p-4 sm:p-8 overflow-y-auto custom-scroll relative">
+
+            <!-- Active folder label (mobile) -->
+            <p class="lg:hidden text-xs text-slate-500 font-medium mb-4">
+                📁 Camera Roll &nbsp;·&nbsp; <span id="mobile-remaining">75 remaining</span>
+            </p>
+
+            <!-- ── The Card ── -->
+            <div id="card-wrapper" class="relative w-full max-w-md">
+
+                <!-- Swipe hint overlays -->
+                <div id="hint-trash"
+                    class="absolute inset-0 z-10 flex items-center justify-center rounded-3xl bg-red-500/10 border-2 border-red-400">
+                    <span class="text-red-500 font-bold text-2xl tracking-wide flex items-center gap-2">
+                        <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        TRASH
+                    </span>
+                </div>
+                <div id="hint-keep"
+                    class="absolute inset-0 z-10 flex items-center justify-center rounded-3xl bg-emerald-500/10 border-2 border-emerald-400">
+                    <span class="text-emerald-600 font-bold text-2xl tracking-wide flex items-center gap-2">
+                        <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                        KEEP
+                    </span>
+                </div>
+
+                <!-- Image card -->
+                <div id="triage-card"
+                    class="relative rounded-3xl overflow-hidden shadow-lg border border-slate-200 bg-slate-100 select-none"
+                    style="aspect-ratio: 3/4;">
+
+                    <img id="triage-img"
+                        src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&auto=format&fit=crop&q=80"
+                        alt="Photo to triage" class="w-full h-full object-cover pointer-events-none" draggable="false">
+
+                    <!-- Metadata overlay -->
+                    <div class="absolute bottom-0 inset-x-0 p-4 pt-12"
+                        style="background: linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 100%); backdrop-filter: blur(0px);">
+                        <div class="flex items-end justify-between">
+                            <div>
+                                <p id="img-name" class="text-white text-sm font-semibold leading-tight">IMG_2024_001.jpg
+                                </p>
+                                <p id="img-meta" class="text-white/70 text-xs mt-0.5">4.2 MB &nbsp;·&nbsp; 4032 × 3024
+                                </p>
+                            </div>
+                            <span class="text-white/60 text-xs bg-black/30 px-2 py-1 rounded-full" id="img-date">Jun 12,
+                                2024</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Next card peek (stacked effect) -->
+                <div
+                    class="absolute -bottom-2 left-3 right-3 -z-10 h-8 bg-slate-200 rounded-b-3xl border border-slate-300 opacity-60">
+                </div>
+            </div>
+
+            <!-- ── Action Buttons ── -->
+            <div class="flex items-center gap-4 mt-7 w-full max-w-md">
+
+                <!-- Trash -->
+                <button id="btn-trash" onclick="handleDecision('trash')"
+                    class="action-btn flex-1 flex items-center justify-center gap-2.5 py-3.5 rounded-2xl border-2 border-red-300 text-red-600 font-semibold text-sm hover:bg-red-50 hover:border-red-400 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Trash
+                </button>
+
+                <!-- Undo (small center button) -->
+                <button id="btn-undo" onclick="handleUndo()" title="Undo last decision"
+                    class="action-btn w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-xl border border-slate-200 text-slate-400 hover:text-slate-700 hover:border-slate-300 hover:bg-slate-100 transition disabled:opacity-30"
+                    disabled>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M3 10h10a4 4 0 010 8H9m-6-8l3-3m-3 3l3 3" />
+                    </svg>
+                </button>
+
+                <!-- Keep -->
+                <button id="btn-keep" onclick="handleDecision('keep')"
+                    class="action-btn flex-1 flex items-center justify-center gap-2.5 py-3.5 rounded-2xl bg-slate-900 text-white font-semibold text-sm hover:bg-slate-700 transition-colors shadow-sm">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Keep
+                </button>
+            </div>
+
+            <!-- Keyboard shortcut hint -->
+            <p class="mt-4 text-xs text-slate-400 hidden sm:block">
+                Press <kbd
+                    class="bg-slate-100 border border-slate-200 rounded px-1.5 py-0.5 text-slate-500 font-mono text-[10px]">←</kbd>
+                to trash &nbsp;·&nbsp;
+                <kbd
+                    class="bg-slate-100 border border-slate-200 rounded px-1.5 py-0.5 text-slate-500 font-mono text-[10px]">→</kbd>
+                to keep
+            </p>
+        </section>
+
+
+        <!-- ── RIGHT SIDEBAR ─────────────────────── -->
+        <aside
+            class="hidden lg:flex flex-col w-72 border-l border-slate-200 bg-white overflow-y-auto custom-scroll flex-shrink-0">
+
+            <div class="p-4 space-y-4">
+
+                <!-- Storage Impact Card -->
+                <div class="rounded-2xl border border-slate-200 p-4">
+                    <p class="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-3">Est. Space
+                        Cleared</p>
+                    <p id="space-cleared" class="text-3xl font-extrabold text-slate-900 tracking-tight">0 <span
+                            class="text-base font-semibold text-slate-400">MB</span></p>
+                    <div class="mt-3 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div id="space-bar" class="progress-fill h-full bg-emerald-500 rounded-full"
+                            style="width: 0%; --target-w: 0%;"></div>
+                    </div>
+                    <p class="text-[11px] text-slate-400 mt-2">of ~15 GB estimated total</p>
+                </div>
+
+                <!-- History Queue -->
+                <div class="rounded-2xl border border-slate-200 overflow-hidden">
+                    <div class="px-4 py-3 border-b border-slate-100">
+                        <p class="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Recent Decisions
+                        </p>
+                    </div>
+                    <ul id="history-list" class="divide-y divide-slate-100">
+                        <!-- Populated by JS -->
+                        <li class="px-4 py-3 flex items-center gap-3 text-slate-400 text-xs italic">
+                            No decisions yet…
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Session Stats -->
+                <div class="rounded-2xl border border-slate-200 p-4 space-y-3">
+                    <p class="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Session Stats</p>
+
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs text-slate-500">Files Remaining</span>
+                        <span id="files-remaining" class="text-sm font-bold text-slate-900">75</span>
+                    </div>
+
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs text-slate-500">Current Progress</span>
+                        <span id="progress-text" class="text-sm font-bold text-slate-900">45 / 120</span>
+                    </div>
+
+                    <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div id="progress-bar" class="h-full bg-slate-900 rounded-full transition-all duration-500"
+                            style="width: 37.5%"></div>
+                    </div>
+
+                    <div class="flex justify-between text-[11px] text-slate-400">
+                        <span id="keep-count-text">✓ 30 kept</span>
+                        <span id="trash-count-text">✗ 15 trashed</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Finalize Cleanup button (sticky at bottom) -->
+            <div class="mt-auto p-4 border-t border-slate-100">
+                <button id="btn-finalize" onclick="handleFinalize()"
+                    class="action-btn w-full py-3 rounded-2xl bg-emerald-600 text-white font-semibold text-sm hover:bg-emerald-700 transition shadow-sm flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Finalize Cleanup
+                </button>
+                <p class="text-center text-[10px] text-slate-400 mt-2">This will permanently delete trashed files.</p>
+            </div>
+        </aside>
+
+    </main>
+
+
+    <!-- FINALIZE MODAL -->
+    <div id="finalize-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" onclick="closeModal()"></div>
+        <div class="relative bg-white rounded-3xl border border-slate-200 shadow-2xl p-6 w-full max-w-sm space-y-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-red-100 flex items-center justify-center flex-shrink-0">
+                    <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" stroke-width="2"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                </div>
+                <div>
+                    <h2 class="text-base font-bold text-slate-900">Finalize Cleanup?</h2>
+                    <p class="text-xs text-slate-500">This action cannot be undone.</p>
+                </div>
+            </div>
+            <div class="bg-slate-50 rounded-2xl p-3 space-y-1.5 text-sm">
+                <div class="flex justify-between"><span class="text-slate-500">Files to delete</span><span
+                        id="modal-trash-count" class="font-semibold text-red-600">0 files</span></div>
+                <div class="flex justify-between"><span class="text-slate-500">Space freed</span><span id="modal-space"
+                        class="font-semibold text-emerald-600">0 MB</span></div>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="closeModal()"
+                    class="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 transition">Cancel</button>
+                <button onclick="confirmFinalize()"
+                    class="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition">Yes,
+                    Delete</button>
+            </div>
         </div>
     </div>
+
+
+    <!-- DEMO JAVASCRIPT -->
+    <script>
+        // ── Demo photo dataset ──────────────────────────────────────
+        const PHOTOS = [
+            { src: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&auto=format&fit=crop&q=80', name: 'IMG_2024_001.jpg', size: '4.2 MB', dim: '4032 × 3024', date: 'Jun 12, 2024', bytes: 4.2 },
+            { src: 'https://images.unsplash.com/photo-1501854140801-50d01698950b?w=600&auto=format&fit=crop&q=80', name: 'IMG_2024_002.jpg', size: '3.8 MB', dim: '4032 × 3024', date: 'Jun 13, 2024', bytes: 3.8 },
+            { src: 'https://images.unsplash.com/photo-1470770903676-69b98201ea1c?w=600&auto=format&fit=crop&q=80', name: 'IMG_2024_003.jpg', size: '5.1 MB', dim: '4032 × 3024', date: 'Jun 14, 2024', bytes: 5.1 },
+            { src: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=600&auto=format&fit=crop&q=80', name: 'IMG_2024_004.jpg', size: '2.9 MB', dim: '3024 × 3024', date: 'Jun 15, 2024', bytes: 2.9 },
+            { src: 'https://images.unsplash.com/photo-1518020382113-a7e8fc38eac9?w=600&auto=format&fit=crop&q=80', name: 'IMG_2024_005.jpg', size: '6.0 MB', dim: '4032 × 3024', date: 'Jun 16, 2024', bytes: 6.0 },
+            { src: 'https://images.unsplash.com/photo-1475924156734-496f6cac6ec1?w=600&auto=format&fit=crop&q=80', name: 'IMG_2024_006.jpg', size: '3.3 MB', dim: '3024 × 3024', date: 'Jun 17, 2024', bytes: 3.3 },
+            { src: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=600&auto=format&fit=crop&q=80', name: 'IMG_2024_007.jpg', size: '4.7 MB', dim: '4032 × 3024', date: 'Jun 18, 2024', bytes: 4.7 },
+            { src: 'https://images.unsplash.com/photo-1546587348-d12660c30c50?w=600&auto=format&fit=crop&q=80', name: 'IMG_2024_008.jpg', size: '2.2 MB', dim: '3024 × 3024', date: 'Jun 19, 2024', bytes: 2.2 },
+        ];
+
+        // ── State ───────────────────────────────────────────────────
+        let currentIndex = 0;
+        let keptCount = 0;
+        let trashedCount = 0;
+        let spaceClearedMB = 0;
+        const TOTAL = PHOTOS.length;
+        const history = [];  // { photo, decision }
+
+        // ── DOM refs ────────────────────────────────────────────────
+        const card = document.getElementById('triage-card');
+        const img = document.getElementById('triage-img');
+        const imgName = document.getElementById('img-name');
+        const imgMeta = document.getElementById('img-meta');
+        const imgDate = document.getElementById('img-date');
+        const hintTrash = document.getElementById('hint-trash');
+        const hintKeep = document.getElementById('hint-keep');
+        const btnUndo = document.getElementById('btn-undo');
+
+        // ── Load photo ──────────────────────────────────────────────
+        function loadPhoto(idx) {
+            if (idx >= TOTAL) { showDoneState(); return; }
+            const p = PHOTOS[idx];
+            img.src = p.src;
+            imgName.textContent = p.name;
+            imgMeta.textContent = `${p.size} · ${p.dim}`;
+            imgDate.textContent = p.date;
+        }
+
+        // ── Handle decision ─────────────────────────────────────────
+        function handleDecision(action) {
+            if (currentIndex >= TOTAL) return;
+            const photo = PHOTOS[currentIndex];
+
+            // Animate card out
+            card.classList.add(action === 'trash' ? 'swipe-left' : 'swipe-right');
+
+            setTimeout(() => {
+                card.classList.remove('swipe-left', 'swipe-right');
+
+                // Update state
+                history.push({ photo, action });
+                if (action === 'trash') {
+                    trashedCount++;
+                    spaceClearedMB += photo.bytes;
+                } else {
+                    keptCount++;
+                }
+                currentIndex++;
+
+                loadPhoto(currentIndex);
+                updateUI();
+
+                // Enable undo
+                btnUndo.disabled = false;
+            }, 350);
+        }
+
+        // ── Undo ─────────────────────────────────────────────────────
+        function handleUndo() {
+            if (!history.length) return;
+            const last = history.pop();
+
+            if (last.action === 'trash') {
+                trashedCount--;
+                spaceClearedMB -= last.photo.bytes;
+            } else {
+                keptCount--;
+            }
+            currentIndex--;
+            loadPhoto(currentIndex);
+            updateUI();
+
+            if (!history.length) btnUndo.disabled = true;
+        }
+
+        // ── Update all UI counters ───────────────────────────────────
+        function updateUI() {
+            const done = keptCount + trashedCount;
+            const remaining = TOTAL - done;
+
+            // Stats sidebar
+            document.getElementById('files-remaining').textContent = remaining;
+            document.getElementById('progress-text').textContent = `${done} / ${TOTAL}`;
+            document.getElementById('keep-count-text').textContent = `✓ ${keptCount} kept`;
+            document.getElementById('trash-count-text').textContent = `✗ ${trashedCount} trashed`;
+
+            // Progress bar
+            const pct = (done / TOTAL) * 100;
+            document.getElementById('progress-bar').style.width = `${pct}%`;
+
+            // Space cleared
+            const mb = spaceClearedMB;
+            const label = mb >= 1024 ? `${(mb / 1024).toFixed(1)} <span class="text-base font-semibold text-slate-400">GB</span>`
+                : `${mb.toFixed(1)} <span class="text-base font-semibold text-slate-400">MB</span>`;
+            document.getElementById('space-cleared').innerHTML = label;
+
+            const spacePct = Math.min((mb / (15 * 1024)) * 100, 100);
+            const bar = document.getElementById('space-bar');
+            bar.style.setProperty('--target-w', `${spacePct}%`);
+            bar.style.width = `${spacePct}%`;
+
+            // Trash count badge
+            document.getElementById('trash-count-badge').textContent = trashedCount;
+
+            // Mobile remaining
+            document.getElementById('mobile-remaining').textContent = `${remaining} remaining`;
+
+            // History list
+            updateHistory();
+
+            // Finalize modal values
+            document.getElementById('modal-trash-count').textContent = `${trashedCount} file${trashedCount !== 1 ? 's' : ''}`;
+            document.getElementById('modal-space').textContent = mb >= 1024 ? `${(mb / 1024).toFixed(1)} GB` : `${mb.toFixed(1)} MB`;
+        }
+
+        // ── History list ─────────────────────────────────────────────
+        function updateHistory() {
+            const list = document.getElementById('history-list');
+            list.innerHTML = '';
+
+            if (!history.length) {
+                list.innerHTML = `<li class="px-4 py-3 flex items-center gap-3 text-slate-400 text-xs italic">No decisions yet…</li>`;
+                return;
+            }
+
+            // Show last 5 in reverse
+            [...history].reverse().slice(0, 5).forEach(({ photo, action }) => {
+                const isTrash = action === 'trash';
+                const li = document.createElement('li');
+                li.className = 'px-4 py-2.5 flex items-center gap-3';
+                li.innerHTML = `
+            <img src="${photo.src}" alt="" class="w-9 h-9 rounded-lg object-cover flex-shrink-0 border border-slate-100">
+            <div class="flex-1 min-w-0">
+                <p class="text-xs font-medium text-slate-700 truncate">${photo.name}</p>
+                <p class="text-[10px] text-slate-400">${photo.size}</p>
+            </div>
+            <div class="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${isTrash ? 'bg-red-100' : 'bg-emerald-100'}">
+                ${isTrash
+                        ? `<svg class="w-3 h-3 text-red-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>`
+                        : `<svg class="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>`
+                    }
+            </div>
+        `;
+                list.appendChild(li);
+            });
+        }
+
+        // ── Done state ───────────────────────────────────────────────
+        function showDoneState() {
+            const cardWrapper = document.getElementById('card-wrapper');
+            cardWrapper.innerHTML = `
+        <div class="flex flex-col items-center justify-center text-center rounded-3xl border-2 border-dashed border-slate-200 bg-slate-50 p-12 space-y-4" style="aspect-ratio: 3/4;">
+            <div class="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center">
+                <svg class="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                </svg>
+            </div>
+            <div>
+                <p class="text-lg font-bold text-slate-900">All done! 🎉</p>
+                <p class="text-sm text-slate-500 mt-1">You've triaged all ${TOTAL} photos.</p>
+            </div>
+        </div>
+    `;
+
+            document.getElementById('btn-trash').disabled = true;
+            document.getElementById('btn-keep').disabled = true;
+            document.getElementById('btn-trash').classList.add('opacity-40', 'cursor-not-allowed');
+            document.getElementById('btn-keep').classList.add('opacity-40', 'cursor-not-allowed');
+        }
+
+        // ── Folder selection ─────────────────────────────────────────
+        function selectFolder(el) {
+            document.querySelectorAll('.folder-item').forEach(b => {
+                b.classList.remove('bg-slate-100', 'text-slate-900', 'font-medium');
+                b.classList.add('text-slate-600');
+            });
+            el.classList.add('bg-slate-100', 'text-slate-900', 'font-medium');
+            el.classList.remove('text-slate-600');
+        }
+
+        // ── Finalize modal ───────────────────────────────────────────
+        function handleFinalize() {
+            document.getElementById('finalize-modal').classList.remove('hidden');
+        }
+        function closeModal() {
+            document.getElementById('finalize-modal').classList.add('hidden');
+        }
+        function confirmFinalize() {
+            closeModal();
+            // In production this would call a backend API
+            setTimeout(() => {
+                alert(`✅ Cleanup complete!\n\n${trashedCount} file${trashedCount !== 1 ? 's' : ''} permanently deleted.\nEstimated space freed: ${spaceClearedMB.toFixed(1)} MB`);
+                trashedCount = 0;
+                spaceClearedMB = 0;
+                updateUI();
+            }, 100);
+        }
+
+        // ── Keyboard shortcuts ───────────────────────────────────────
+        document.addEventListener('keydown', e => {
+            if (e.key === 'ArrowLeft') handleDecision('trash');
+            if (e.key === 'ArrowRight') handleDecision('keep');
+            if ((e.key === 'z' || e.key === 'Z') && (e.metaKey || e.ctrlKey)) { e.preventDefault(); handleUndo(); }
+        });
+
+        // ── Drag-to-swipe on card ────────────────────────────────────
+        let startX = 0, dragging = false;
+
+        card.addEventListener('mousedown', e => { startX = e.clientX; dragging = true; });
+        card.addEventListener('mousemove', e => {
+            if (!dragging) return;
+            const dx = e.clientX - startX;
+            card.style.transform = `translateX(${dx * 0.3}px) rotate(${dx * 0.02}deg)`;
+
+            if (dx < -30) { hintTrash.style.opacity = '1'; hintKeep.style.opacity = '0'; }
+            else if (dx > 30) { hintKeep.style.opacity = '1'; hintTrash.style.opacity = '0'; }
+            else { hintTrash.style.opacity = '0'; hintKeep.style.opacity = '0'; }
+        });
+        document.addEventListener('mouseup', e => {
+            if (!dragging) return;
+            dragging = false;
+            const dx = e.clientX - startX;
+            card.style.transform = '';
+            hintTrash.style.opacity = '0';
+            hintKeep.style.opacity = '0';
+
+            if (dx < -60) handleDecision('trash');
+            else if (dx > 60) handleDecision('keep');
+        });
+
+        // Touch support
+        card.addEventListener('touchstart', e => { startX = e.touches[0].clientX; dragging = true; }, { passive: true });
+        card.addEventListener('touchmove', e => {
+            if (!dragging) return;
+            const dx = e.touches[0].clientX - startX;
+            card.style.transform = `translateX(${dx * 0.3}px) rotate(${dx * 0.02}deg)`;
+            if (dx < -30) { hintTrash.style.opacity = '1'; hintKeep.style.opacity = '0'; }
+            else if (dx > 30) { hintKeep.style.opacity = '1'; hintTrash.style.opacity = '0'; }
+            else { hintTrash.style.opacity = '0'; hintKeep.style.opacity = '0'; }
+        }, { passive: true });
+        card.addEventListener('touchend', e => {
+            if (!dragging) return;
+            dragging = false;
+            const dx = e.changedTouches[0].clientX - startX;
+            card.style.transform = '';
+            hintTrash.style.opacity = '0';
+            hintKeep.style.opacity = '0';
+            if (dx < -60) handleDecision('trash');
+            else if (dx > 60) handleDecision('keep');
+        });
+
+        // ── Init ─────────────────────────────────────────────────────
+        loadPhoto(0);
+    </script>
+
 </body>
 
 </html>

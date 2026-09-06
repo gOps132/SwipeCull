@@ -72,10 +72,10 @@ input:focus {
     font-size: 0.75rem;
     color: #6b7280;
     background: #f3f4f6;
+    padding: 8px;
 }
 
 .helptext ul {
     list-style: none;
-    padding: 8px;
     border-radius: 6px;
 }

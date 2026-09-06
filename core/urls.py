@@ -20,5 +20,6 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('main.urls')) # connects to main app urls
+    path('', include('dashboard.urls')),  # triage home — root URL
+    path('', include('accounts.urls')),   # auth — login/, logout/, register/
 ]

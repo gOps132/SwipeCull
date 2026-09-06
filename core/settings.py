@@ -37,7 +37,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'main'
+    'accounts',   # auth: login, register, logout
+    'dashboard',  # triage: home view
 ]
 
 MIDDLEWARE = [
@@ -131,6 +132,6 @@ MAILERS = {
     },
 }
 
-LOGIN_URL = '/login/'
+LOGIN_URL = '/login/'          # stays at root level
 LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'login'

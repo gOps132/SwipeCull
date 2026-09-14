@@ -1,0 +1,392 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SwipeCull — Dashboard</title>
+    <meta name="description" content="Triage your cloud photos with SwipeCull. Keep what matters, trash the rest.">
+
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+                    },
+                }
+            }
+        }
+    </script>
+
+    <!-- Feature CSS -->
+    <link rel="stylesheet" href="{% static 'css/home/home.css' %}">
+</head>
+
+<body class="bg-slate-50 min-h-screen font-sans text-slate-900 antialiased">
+
+    <!-- ════════════════════════════════════════
+     NAVBAR
+════════════════════════════════════════ -->
+    <header class="bg-white border-b border-slate-200 h-14 flex items-center px-5 justify-between sticky top-0 z-30">
+
+        <!-- Logo -->
+        <div class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded-lg bg-slate-900 flex items-center justify-center">
+                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2.2"
+                    viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 7h18M3 12h18M3 17h18" />
+                </svg>
+            </div>
+            <span class="text-[15px] font-bold tracking-tight text-slate-900">SwipeCull</span>
+        </div>
+
+        <!-- Right: Connection badge + Avatar -->
+        <div class="flex items-center gap-3">
+
+            <!-- Google Drive status pill -->
+            <div id="drive-status"
+                class="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-medium px-3 py-1 rounded-full">
+                <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                <svg class="w-3 h-3" viewBox="0 0 48 48" fill="none">
+                    <path d="M6 38l8-14 8 14H6z" fill="#34a853" />
+                    <path d="M16 10l8 14 8-14H16z" fill="#4285f4" />
+                    <path d="M26 38l8-14 8 14H26z" fill="#fbbc05" />
+                </svg>
+                Drive Connected
+            </div>
+
+            <!-- Logout -->
+            <a href="{% url 'login' %}"
+                class="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-900 transition px-2 py-1 rounded-md hover:bg-slate-100">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1" />
+                </svg>
+                Logout
+            </a>
+
+            <!-- Avatar -->
+            <div
+                class="w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center text-white text-xs font-semibold select-none">
+                {{ request.user.username|first|upper }}
+            </div>
+        </div>
+    </header>
+
+
+    <main class="flex h-[calc(100vh-56px)] overflow-hidden">
+
+        <!-- ════════════════════════════════════════
+         LEFT SIDEBAR: Drive Source Explorer
+    ════════════════════════════════════════ -->
+        <aside class="w-64 bg-white border-r border-slate-200 flex flex-col justify-between flex-shrink-0">
+
+            <!-- Top: Account info + folder tree -->
+            <div class="p-4 overflow-y-auto custom-scroll space-y-5">
+
+                <!-- User account row -->
+                <div class="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                    <div
+                        class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 font-semibold text-xs flex items-center justify-center flex-shrink-0">
+                        {{ request.user.username|slice:":2"|upper }}
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <p class="text-xs font-semibold text-slate-800 truncate">{{ request.user.username }}</p>
+                        <p class="text-[11px] text-slate-400 truncate">{{ request.user.email|default:"user@drive.google.com" }}</p>
+                    </div>
+                </div>
+
+                <!-- Source folders -->
+                <div class="space-y-1">
+                    <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-2 mb-2">Source
+                        Folder</p>
+
+                    <button onclick="selectFolder(this)"
+                        class="folder-item w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs font-medium bg-slate-100 text-slate-900 transition text-left">
+                        <div class="flex items-center gap-2 truncate">
+                            <svg class="w-4 h-4 text-amber-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path
+                                    d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+                            </svg>
+                            <span class="truncate">Google Photos / 2024</span>
+                        </div>
+                        <span
+                            class="text-[10px] bg-slate-200 text-slate-600 font-semibold px-1.5 py-0.5 rounded-full">8</span>
+                    </button>
+
+                    <button onclick="selectFolder(this)"
+                        class="folder-item w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs text-slate-600 hover:bg-slate-50 transition text-left">
+                        <div class="flex items-center gap-2 truncate">
+                            <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path
+                                    d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+                            </svg>
+                            <span class="truncate">Camera Uploads</span>
+                        </div>
+                        <span class="text-[10px] text-slate-400 px-1.5 py-0.5">142</span>
+                    </button>
+
+                    <button onclick="selectFolder(this)"
+                        class="folder-item w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs text-slate-600 hover:bg-slate-50 transition text-left">
+                        <div class="flex items-center gap-2 truncate">
+                            <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path
+                                    d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+                            </svg>
+                            <span class="truncate">Screenshots</span>
+                        </div>
+                        <span class="text-[10px] text-slate-400 px-1.5 py-0.5">87</span>
+                    </button>
+                </div>
+
+                <!-- Storage footprint estimate -->
+                <div class="p-3 bg-slate-50 border border-slate-100 rounded-xl space-y-2">
+                    <div class="flex justify-between items-center text-[11px] font-medium text-slate-600">
+                        <span>Drive storage used</span>
+                        <span class="font-semibold text-slate-800">11.4 / 15 GB</span>
+                    </div>
+                    <div class="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                        <div class="h-full bg-amber-500 rounded-full" style="width: 76%;"></div>
+                    </div>
+                    <p class="text-[10px] text-slate-400">76% full · Culling can recover ~3.2 GB</p>
+                </div>
+
+            </div>
+
+            <!-- Bottom: Storage recovery meter -->
+            <div class="p-4 border-t border-slate-100 bg-slate-50/60">
+                <div class="flex items-center justify-between mb-1.5">
+                    <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Space
+                        Freed</span>
+                    <span id="trash-count-badge"
+                        class="text-[10px] font-bold bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full">0</span>
+                </div>
+                <p id="space-cleared" class="text-2xl font-bold text-slate-900 tracking-tight leading-none">0.0 <span
+                        class="text-base font-semibold text-slate-400">MB</span></p>
+                <div class="h-1 bg-slate-200 rounded-full mt-2 overflow-hidden">
+                    <div id="space-bar" class="h-full bg-emerald-500 rounded-full transition-all duration-300"
+                        style="width: 0%;"></div>
+                </div>
+            </div>
+
+        </aside>
+
+
+        <!-- ════════════════════════════════════════
+         CENTER STAGE: The Triage Canvas
+    ════════════════════════════════════════ -->
+        <section class="flex-1 flex flex-col items-center justify-between p-6 overflow-hidden relative">
+
+            <!-- Mobile remaining pill -->
+            <div class="sm:hidden w-full flex justify-center mb-2">
+                <span id="mobile-remaining"
+                    class="text-xs bg-white border border-slate-200 text-slate-600 font-medium px-3 py-1 rounded-full shadow-sm">
+                    8 remaining
+                </span>
+            </div>
+
+            <!-- Triage Card Canvas -->
+            <div class="flex-1 w-full max-w-sm flex items-center justify-center relative select-none"
+                id="card-wrapper">
+
+                <!-- The Swipable Card -->
+                <div id="triage-card"
+                    class="w-full bg-white rounded-2xl shadow-xl shadow-slate-200/80 border border-slate-200/80 overflow-hidden flex flex-col relative"
+                    style="aspect-ratio: 3/4;">
+
+                    <!-- Photo container -->
+                    <div class="relative flex-1 bg-slate-900 overflow-hidden group">
+                        <img id="triage-img" src="" alt="Photo to triage"
+                            class="w-full h-full object-cover pointer-events-none transition-transform duration-200">
+
+                        <!-- Hint overlay: Trash (shown on left drag) -->
+                        <div id="hint-trash"
+                            class="absolute inset-0 bg-red-600/30 flex items-center justify-center">
+                            <span
+                                class="border-2 border-red-500 text-red-500 font-extrabold text-2xl tracking-widest px-4 py-1.5 rounded-xl rotate-[-15deg] uppercase bg-white/80 backdrop-blur-sm">TRASH</span>
+                        </div>
+
+                        <!-- Hint overlay: Keep (shown on right drag) -->
+                        <div id="hint-keep"
+                            class="absolute inset-0 bg-emerald-600/30 flex items-center justify-center">
+                            <span
+                                class="border-2 border-emerald-500 text-emerald-600 font-extrabold text-2xl tracking-widest px-4 py-1.5 rounded-xl rotate-[15deg] uppercase bg-white/80 backdrop-blur-sm">KEEP</span>
+                        </div>
+                    </div>
+
+                    <!-- Metadata footer -->
+                    <div class="p-3.5 bg-white border-t border-slate-100 flex items-center justify-between">
+                        <div class="min-w-0 flex-1 mr-2">
+                            <p id="img-name" class="text-xs font-semibold text-slate-800 truncate">—</p>
+                            <p id="img-meta" class="text-[11px] text-slate-400 mt-0.5">—</p>
+                        </div>
+                        <span id="img-date"
+                            class="text-[10px] font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md flex-shrink-0">—</span>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Action Controls Bar -->
+            <div class="w-full max-w-sm flex items-center justify-center gap-4 pt-4">
+
+                <!-- Trash button -->
+                <button id="btn-trash" onclick="handleDecision('trash')"
+                    class="action-btn flex-1 flex items-center justify-center gap-2 bg-white border border-slate-200 hover:border-red-200 hover:bg-red-50/60 text-slate-700 hover:text-red-600 font-semibold text-xs py-3 rounded-xl shadow-sm transition group">
+                    <svg class="w-4 h-4 text-slate-400 group-hover:text-red-500 transition" fill="none"
+                        stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Trash <span class="font-normal text-slate-400 text-[10px] group-hover:text-red-400">(←)</span>
+                </button>
+
+                <!-- Undo button -->
+                <button id="btn-undo" onclick="handleUndo()" disabled
+                    class="action-btn w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-500 hover:text-slate-800 disabled:opacity-30 disabled:cursor-not-allowed shadow-sm transition flex-shrink-0"
+                    title="Undo (Ctrl+Z)">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M3 10h10a5 5 0 015 5v2M3 10l6 6m-6-6l6-6" />
+                    </svg>
+                </button>
+
+                <!-- Keep button -->
+                <button id="btn-keep" onclick="handleDecision('keep')"
+                    class="action-btn flex-1 flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs py-3 rounded-xl shadow-sm transition group">
+                    Keep <span class="font-normal text-slate-400 text-[10px]">(→)</span>
+                    <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" stroke-width="2.5"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                </button>
+
+            </div>
+
+            <!-- Keyboard shortcut hint -->
+            <p class="text-[11px] text-slate-400 text-center mt-2 select-none">
+                Use <kbd class="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[10px] font-mono">←</kbd>
+                Trash &nbsp;·&nbsp;
+                <kbd class="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[10px] font-mono">→</kbd> Keep
+                &nbsp;·&nbsp;
+                <kbd class="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[10px] font-mono">⌘Z</kbd>
+                Undo
+            </p>
+
+        </section>
+
+
+        <!-- ════════════════════════════════════════
+         RIGHT SIDEBAR: Session Stats & Trash Bin
+    ════════════════════════════════════════ -->
+        <aside class="w-72 bg-white border-l border-slate-200 flex flex-col justify-between flex-shrink-0">
+
+            <div class="p-5 space-y-6 overflow-y-auto custom-scroll flex-1">
+
+                <!-- Progress block -->
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="font-semibold text-slate-700">Triage Progress</span>
+                        <span id="progress-text" class="text-slate-500 font-mono text-[11px]">0 / 8</span>
+                    </div>
+                    <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
+                        <div id="progress-bar" class="h-full bg-slate-900 rounded-full transition-all duration-300"
+                            style="width: 0%;"></div>
+                    </div>
+                    <div class="flex justify-between text-[11px] text-slate-400 pt-0.5">
+                        <span id="keep-count-text">✓ 0 kept</span>
+                        <span id="trash-count-text">✗ 0 trashed</span>
+                    </div>
+                </div>
+
+                <!-- Stats summary cards -->
+                <div class="grid grid-cols-2 gap-2.5">
+                    <div class="p-3 bg-slate-50 border border-slate-100 rounded-xl">
+                        <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Remaining</p>
+                        <p id="files-remaining" class="text-xl font-bold text-slate-900 mt-0.5">8</p>
+                    </div>
+                    <div class="p-3 bg-slate-50 border border-slate-100 rounded-xl">
+                        <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Session Time</p>
+                        <p class="text-xl font-bold text-slate-900 mt-0.5">1<span
+                                class="text-xs font-normal text-slate-400">m</span></p>
+                    </div>
+                </div>
+
+                <!-- Recent decisions list -->
+                <div class="space-y-2">
+                    <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Recent Decisions
+                    </p>
+                    <ul id="history-list"
+                        class="divide-y divide-slate-100 bg-slate-50 border border-slate-100 rounded-xl overflow-hidden text-xs">
+                        <li class="px-4 py-3 flex items-center gap-3 text-slate-400 text-xs italic">No decisions
+                            yet…</li>
+                    </ul>
+                </div>
+
+            </div>
+
+            <!-- Bottom: Finalize & Purge CTA -->
+            <div class="p-4 border-t border-slate-100 bg-white">
+                <button onclick="handleFinalize()"
+                    class="w-full bg-red-600 hover:bg-red-700 text-white font-semibold text-xs py-2.5 rounded-xl shadow-sm transition flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Apply Changes to Drive
+                </button>
+                <p class="text-[10px] text-slate-400 text-center mt-1.5">Files are moved to Google Drive Trash</p>
+            </div>
+
+        </aside>
+
+    </main>
+
+
+    <!-- ════════════════════════════════════════
+     FINALIZE MODAL (Confirmation dialog)
+════════════════════════════════════════ -->
+    <div id="finalize-modal"
+        class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 space-y-4">
+            <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+            </div>
+            <div>
+                <h3 class="text-sm font-bold text-slate-900">Apply Triage Decisions?</h3>
+                <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+                    This will permanently move <span id="modal-trash-count"
+                        class="font-semibold text-slate-800">0 files</span> to your Google Drive trash,
+                    recovering approximately <span id="modal-space" class="font-semibold text-emerald-600">0.0
+                        MB</span>.
+                </p>
+            </div>
+            <div class="flex gap-2 pt-2">
+                <button onclick="closeModal()"
+                    class="flex-1 py-2 text-xs font-semibold rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 transition">Cancel</button>
+                <button onclick="confirmFinalize()"
+                    class="flex-1 py-2 text-xs font-semibold rounded-lg bg-red-600 hover:bg-red-700 text-white transition">Confirm
+                    Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feature JS -->
+    <script src="{% static 'js/home/home.js' %}"></script>
+</body>
+
+</html>

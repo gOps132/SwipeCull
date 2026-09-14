@@ -1,0 +1,107 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SwipeCull - Sign In</title>
+
+    <!-- 1. Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- 2. Feature CSS -->
+    <link rel="stylesheet" href="{% static 'css/login/login.css' %}">
+</head>
+
+<body class="bg-white min-h-screen">
+
+    <div
+        class="min-h-screen w-full flex flex-col justify-center items-center md:grid md:grid-cols-2 md:items-stretch md:justify-stretch">
+        <!-- Left Side: Form -->
+        <div class="flex items-center justify-center w-full p-8 min-h-screen md:min-h-0">
+            <div class="mx-auto w-full max-w-[350px] space-y-6">
+                <div class="flex flex-col space-y-2 text-center">
+                    <h1 class="text-2xl font-semibold tracking-tight">Sign in to your account</h1>
+                    <p class="text-sm text-gray-500">Enter your credentials below to access SwipeCull</p>
+                </div>
+
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                    <div class="errorlist">
+                        {{ form.non_field_errors }}
+                    </div>
+                    {% endif %}
+
+                    {% for field in form %}
+                    <div class="field-group">
+                        <!-- The Label -->
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+
+                        <!-- The Input Box -->
+                        {{ field }}
+
+                        <!-- The Error Message (Only shows if there is one) -->
+                        {% if field.errors %}
+                        <div class="errorlist">
+                            {{ field.errors }}
+                        </div>
+                        {% endif %}
+
+                        <!-- The Help Text (Password rules) -->
+                        {% if field.help_text %}
+                        <div class="helptext">
+                            {{ field.help_text|safe }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+
+                    <button type="submit"
+                        class="w-full bg-black text-white py-2 rounded-md hover:bg-gray-800 transition">
+                        Sign In
+                    </button>
+                </form>
+
+                <div class="relative">
+                    <div class="absolute inset-0 flex items-center"><span
+                            class="w-full border-t border-gray-200"></span></div>
+                    <div class="relative flex justify-center text-xs uppercase"><span
+                            class="bg-white px-2 text-gray-500">Or continue with</span></div>
+                </div>
+
+                <button
+                    class="w-full border border-gray-300 py-2 rounded-md flex items-center justify-center hover:bg-gray-50 transition">
+                    <img src="https://cdn.21st.dev/assets/mirror/38/38146bfd9eff6dbf0d74771f2e625c70d87d3770e0d080dbb6e50db1d5403f46.svg"
+                        class="mr-2 h-4 w-4">
+                    Continue with Google
+                </button>
+
+                <p class="text-center text-sm text-gray-600">
+                    Don't have an account?
+                    <a href="{% url 'register' %}" class="font-medium text-black underline underline-offset-4">Sign
+                        up</a>
+                </p>
+            </div>
+        </div>
+
+        <!-- Right Side: Image & Quote -->
+        <div class="hidden md:block relative bg-gray-900 overflow-hidden">
+            <img src="https://images.unsplash.com/photo-1542037104857-ffbb0b9155fb?q=80&w=1954&auto=format&fit=crop"
+                class="absolute inset-0 h-full w-full object-cover opacity-70">
+            <div class="relative z-20 flex h-full flex-col justify-end p-10 text-white">
+                <blockquote class="space-y-2">
+                    <p class="text-lg">“Welcome Back! The journey continues.”</p>
+                    <footer class="text-sm font-light opacity-80">— SwipeCull Photo Triage</footer>
+                </blockquote>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feature JS -->
+    <script src="{% static 'js/login/login.js' %}"></script>
+</body>
+
+</html>

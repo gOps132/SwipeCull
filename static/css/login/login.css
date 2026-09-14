@@ -1,0 +1,79 @@
+/* --- Login Vertical Slice CSS --- */
+:root {
+    --primary: #000000;
+    --error-bg: #fff1f2;
+    --error-text: #e11d48;
+    --error-border: #ffe4e6;
+}
+
+/* Form Container */
+.field-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 1.25rem;
+}
+
+/* Labels */
+label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: #1f2937;
+}
+
+/* Inputs */
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input {
+    width: 100%;
+    padding: 0.45rem 1rem;
+    font-size: 1rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.6rem;
+    background-color: #f9fafb;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
+
+input:focus {
+    outline: none;
+    border-color: var(--primary);
+    background-color: #ffffff;
+    box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Error Messages */
+.errorlist {
+    list-style: none;
+    padding: 0.3rem;
+    margin: 0.1rem;
+    background-color: var(--error-bg);
+    border: 1px solid var(--error-border);
+    border-radius: 0.5rem;
+    color: var(--error-text);
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.errorlist li::before {
+    content: "✕ ";
+    font-weight: bold;
+    margin-right: 0.3rem;
+}
+
+/* Password Requirements / Help Text */
+.helptext {
+    display: block;
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+    color: #6b7280;
+    background: #f3f4f6;
+    padding: 8px;
+}
+
+.helptext ul {
+    list-style: none;
+    border-radius: 6px;
+}

@@ -1,0 +1,107 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SwipeCull - Create Account</title>
+
+    <!-- 1. Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- 2. Feature CSS -->
+    <link rel="stylesheet" href="{% static 'css/register/register.css' %}">
+</head>
+
+<body class="bg-white min-h-screen">
+
+
+    <div
+        class="min-h-screen w-full flex flex-col justify-center items-center md:grid md:grid-cols-2 md:items-stretch md:justify-stretch">
+        <!-- Left Side: Form -->
+        <div class="flex items-center justify-center p-8">
+            <div class="mx-auto w-full max-w-[350px] space-y-6">
+                <div class="flex flex-col space-y-2 text-center">
+                    <h1 class="text-2xl font-semibold tracking-tight">Create an account</h1>
+                    <p class="text-sm text-gray-500">Join SwipeCull to start decluttering your Drive</p>
+                </div>
+
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                    <div class="errorlist">
+                        {{ form.non_field_errors }}
+                    </div>
+                    {% endif %}
+
+                    {% for field in form %}
+                    <div class="field-group">
+                        <!-- The Label -->
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+
+                        <!-- The Input Box -->
+                        {{ field }}
+
+                        <!-- The Error Message (Only shows if there is one) -->
+                        {% if field.errors %}
+                        <div class="errorlist">
+                            {{ field.errors }}
+                        </div>
+                        {% endif %}
+
+                        <!-- The Help Text (Password rules) -->
+                        {% if field.help_text %}
+                        <div class="helptext">
+                            {{ field.help_text|safe }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+
+                    <button type="submit"
+                        class="w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700 transition shadow-md mt-2">
+                        Create Account
+                    </button>
+                </form>
+
+                <div class="relative">
+                    <div class="absolute inset-0 flex items-center"><span
+                            class="w-full border-t border-gray-200"></span></div>
+                    <div class="relative flex justify-center text-xs uppercase"><span
+                            class="bg-white px-2 text-gray-500">Or</span></div>
+                </div>
+
+                <button type="button"
+                    class="w-full border border-gray-300 py-2 rounded-md flex items-center justify-center hover:bg-gray-50 transition">
+                    <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" class="mr-2 h-4 w-4">
+                    Sign up with Google
+                </button>
+
+                <p class="text-center text-sm text-gray-600">
+                    Already have an account?
+                    <a href="{% url 'login' %}" class="font-medium text-green-600 underline underline-offset-4">Sign
+                        in</a>
+                </p>
+            </div>
+        </div>
+
+        <!-- Right Side: Hero Image (Green themed) -->
+        <div class="hidden md:block relative bg-green-900 overflow-hidden">
+            <img src="https://images.unsplash.com/photo-1500628550463-c8881a54d4d4?q=80&w=2069&auto=format&fit=crop"
+                class="absolute inset-0 h-full w-full object-cover opacity-60">
+            <div class="relative z-20 flex h-full flex-col justify-end p-10 text-white">
+                <blockquote class="space-y-2">
+                    <p class="text-lg italic">“A clean cloud is a clear mind. Start your organization journey here.”</p>
+                    <footer class="text-sm font-light opacity-80">— SwipeCull</footer>
+                </blockquote>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feature JS -->
+    <script src="{% static 'js/register/register.js' %}"></script>
+</body>
+
+</html>

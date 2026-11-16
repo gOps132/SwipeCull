@@ -1,8 +1,8 @@
 from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand, CommandError
-from django.utils import timezone
 
-from apps.home.models import CullSession, DriveConnection, MediaFile
+from apps.home.models import CullSession, DriveConnection
+from apps.home.services import populate_demo_files
 
 DEMO_FOLDER_NAME = 'Demo Trip Photos'
 DEMO_FOLDER_ID = 'demo-folder'
@@ -60,28 +60,7 @@ class Command(BaseCommand):
             defaults={'folder_name': DEMO_FOLDER_NAME},
         )
 
-        now = timezone.now()
-        new_files = 0
-        for n in range(1, count + 1):
-            # drive_file_id is globally unique, so namespace it by session.
-            _, file_created = MediaFile.objects.get_or_create(
-                drive_file_id=f'demo-{session.pk}-{n:03d}',
-                defaults={
-                    'session': session,
-                    'file_name': f'IMG_{n:04d}.jpg',
-                    'file_type': 'photo',
-                    'mime_type': 'image/jpeg',
-                    'file_size_mb': f'{2 + (n % 5) * 0.7:.2f}',
-                    'width': 800,
-                    'height': 1000,
-                    'taken_at': now,
-                    'thumbnail_url': f'https://picsum.photos/seed/swipecull-{n}/800/1000',
-                },
-            )
-            new_files += file_created
-
-        session.total_files = session.media_files.count()
-        session.save(update_fields=['total_files'])
+        new_files = populate_demo_files(session, count=count)
 
         verb = 'Created' if created else 'Updated'
         self.stdout.write(self.style.SUCCESS(

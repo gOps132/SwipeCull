@@ -1,12 +1,14 @@
 import json
+from uuid import uuid4
 
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseBadRequest, JsonResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from .models import CullSession, MediaFile, SwipeDecision
+from .models import CullSession, DriveConnection, MediaFile, SwipeDecision
+from .services import populate_demo_files
 
 
 def _serialize_media_file(media_file):
@@ -110,6 +112,31 @@ def home(request):
 def session_detail(request, session_id):
     session = get_object_or_404(CullSession, pk=session_id, user=request.user)
     return _render_home(request, active_session=session)
+
+
+@login_required
+@require_POST
+def create_session(request):
+    folder_name = request.POST.get('folder_name', '').strip() or 'New Photo Session'
+    try:
+        count = int(request.POST.get('count', 10))
+    except (TypeError, ValueError):
+        count = 10
+    count = max(1, min(count, 30))
+
+    connection, _ = DriveConnection.objects.get_or_create(
+        user=request.user,
+        provider='google_drive',
+        defaults={'access_token': 'demo-token'},
+    )
+    session = CullSession.objects.create(
+        user=request.user,
+        drive_connection=connection,
+        folder_name=folder_name[:255],
+        folder_id=f'session-{uuid4().hex[:8]}',
+    )
+    populate_demo_files(session, count=count)
+    return redirect('session_detail', session_id=session.id)
 
 
 @login_required

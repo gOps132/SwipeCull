@@ -133,8 +133,13 @@
 
                 <!-- Source folders -->
                 <div class="space-y-1">
-                    <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-2 mb-2">Source
-                        Folder</p>
+                    <div class="flex items-center justify-between px-2 mb-2">
+                        <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Source Folder</p>
+                        <button type="button" onclick="openNewSessionModal()"
+                            class="text-[11px] font-semibold text-indigo-600 hover:text-indigo-700 px-1.5 py-0.5 rounded hover:bg-slate-100 transition">
+                            + New
+                        </button>
+                    </div>
 
                     {% if sessions %}
                         {% for s in sessions %}
@@ -416,6 +421,36 @@
                     class="flex-1 py-2 text-xs font-semibold rounded-lg bg-red-600 hover:bg-red-700 text-white transition">Confirm
                     Delete</button>
             </div>
+        </div>
+    </div>
+
+    <!-- New Session Modal -->
+    <div id="new-session-modal" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 space-y-4">
+            <div>
+                <h3 class="text-sm font-bold text-slate-900">Start New Cull Session</h3>
+                <p class="text-xs text-slate-500 mt-1">Create a new folder session with sample photos to triage.</p>
+            </div>
+            <form method="post" action="{% url 'create_session' %}" class="space-y-3">
+                {% csrf_token %}
+                <div>
+                    <label for="new-folder-name" class="block text-[11px] font-semibold text-slate-600 mb-1">Folder Name</label>
+                    <input id="new-folder-name" name="folder_name" type="text" required maxlength="255"
+                        placeholder="e.g. Summer Trip 2026"
+                        class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400">
+                </div>
+                <div>
+                    <label for="new-folder-count" class="block text-[11px] font-semibold text-slate-600 mb-1">Photo Count</label>
+                    <input id="new-folder-count" name="count" type="number" min="1" max="30" value="10"
+                        class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400">
+                </div>
+                <div class="flex gap-2 pt-2">
+                    <button type="button" onclick="closeNewSessionModal()"
+                        class="flex-1 py-2 text-xs font-semibold rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 transition">Cancel</button>
+                    <button type="submit"
+                        class="flex-1 py-2 text-xs font-semibold rounded-lg bg-slate-900 hover:bg-slate-800 text-white transition">Create Session</button>
+                </div>
+            </form>
         </div>
     </div>
 

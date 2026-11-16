@@ -111,3 +111,15 @@ class HomeSwipeFlowTests(TestCase):
         self.assertEqual(self.session.status, 'completed')
         self.assertFalse(MediaFile.objects.filter(pk=self.file2.id).exists())
         self.assertTrue(MediaFile.objects.filter(pk=self.file1.id).exists())
+
+    def test_create_session_populates_files_and_redirects(self):
+        self.client.force_login(self.user)
+        resp = self.client.post(
+            reverse('create_session'),
+            data={'folder_name': 'Weekend Hike', 'count': 6},
+        )
+        self.assertEqual(resp.status_code, 302)
+        created = CullSession.objects.get(user=self.user, folder_name='Weekend Hike')
+        self.assertEqual(created.total_files, 6)
+        self.assertEqual(created.media_files.count(), 6)
+        self.assertRedirects(resp, reverse('session_detail', args=[created.id]))

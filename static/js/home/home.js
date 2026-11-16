@@ -306,6 +306,20 @@ function handleFinalize() {
 function closeModal() {
     document.getElementById('finalize-modal').classList.add('hidden');
 }
+
+// ── New session modal ────────────────────────────────────────
+function openNewSessionModal() {
+    const modal = document.getElementById('new-session-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        const input = document.getElementById('new-folder-name');
+        if (input) input.focus();
+    }
+}
+function closeNewSessionModal() {
+    const modal = document.getElementById('new-session-modal');
+    if (modal) modal.classList.add('hidden');
+}
 function showToast(message) {
     const existing = document.getElementById('cull-toast');
     if (existing) existing.remove();
@@ -360,6 +374,8 @@ async function confirmFinalize() {
 
 // ── Keyboard shortcuts ───────────────────────────────────────
 document.addEventListener('keydown', e => {
+    const tag = e.target && e.target.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
     if (e.key === 'ArrowLeft') handleDecision('trash');
     if (e.key === 'ArrowRight') handleDecision('keep');
     if ((e.key === 'z' || e.key === 'Z') && (e.metaKey || e.ctrlKey)) { e.preventDefault(); handleUndo(); }

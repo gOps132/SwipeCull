@@ -1,11 +1,117 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <title>SwipeCull - Settings</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SwipeCull — Settings</title>
+
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Feature CSS -->
+    <link rel="stylesheet" href="{% static 'css/user_settings/user_settings.css' %}">
 </head>
-<body>
-    <h1>User Settings</h1>
-    <a href="{% url 'home' %}">Back to Home</a>
+
+<body class="bg-slate-50 min-h-screen font-sans text-slate-900 antialiased">
+
+    <!-- Header -->
+    <header class="bg-white border-b border-slate-200 h-14 flex items-center px-5 justify-between sticky top-0 z-30">
+        <div class="flex items-center gap-3">
+            <a href="{% url 'home' %}" class="flex items-center gap-2 text-slate-600 hover:text-slate-900 transition">
+                <div class="w-7 h-7 rounded-lg bg-slate-900 flex items-center justify-center">
+                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 7h18M3 12h18M3 17h18" />
+                    </svg>
+                </div>
+                <span class="text-[15px] font-bold tracking-tight text-slate-900">SwipeCull</span>
+            </a>
+            <span class="text-slate-300">/</span>
+            <span class="text-sm font-medium text-slate-600">Settings</span>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <a href="{% url 'home' %}" class="text-xs text-slate-500 hover:text-slate-900 transition px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50">
+                ← Back to Dashboard
+            </a>
+            <a href="{% url 'profile' %}" class="text-xs text-slate-500 hover:text-slate-900 transition px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50">
+                Profile
+            </a>
+            <a href="{% url 'logout' %}" class="text-xs text-slate-500 hover:text-slate-900 transition px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50">
+                Logout
+            </a>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-xl mx-auto py-10 px-4">
+        {% if messages %}
+        <div class="mb-6 space-y-2">
+            {% for message in messages %}
+            <div class="p-3.5 rounded-xl text-xs font-medium bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center gap-2">
+                <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 settings-card">
+            <h1 class="text-xl font-bold text-slate-900 mb-1">Preferences & Settings</h1>
+            <p class="text-xs text-slate-500 mb-6 pb-6 border-b border-slate-100">Configure your application preferences for {{ request.user.username }}.</p>
+
+            <form method="post" class="space-y-6">
+                {% csrf_token %}
+
+                <div class="space-y-4">
+                    <!-- Dark Mode Preference -->
+                    <div class="flex items-center justify-between p-3.5 rounded-xl border border-slate-100 hover:bg-slate-50 transition">
+                        <div>
+                            <label for="{{ form.dark_mode.id_for_label }}" class="text-xs font-semibold text-slate-800 block cursor-pointer">
+                                Dark Mode
+                            </label>
+                            <span class="text-[11px] text-slate-400">Enable dark theme appearance across the dashboard</span>
+                        </div>
+                        <div>
+                            {{ form.dark_mode }}
+                        </div>
+                    </div>
+
+                    <!-- Email Notifications Preference -->
+                    <div class="flex items-center justify-between p-3.5 rounded-xl border border-slate-100 hover:bg-slate-50 transition">
+                        <div>
+                            <label for="{{ form.email_notifications.id_for_label }}" class="text-xs font-semibold text-slate-800 block cursor-pointer">
+                                Email Notifications
+                            </label>
+                            <span class="text-[11px] text-slate-400">Receive summary emails when cull batches complete</span>
+                        </div>
+                        <div>
+                            {{ form.email_notifications }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-4 flex items-center justify-end gap-3">
+                    <a href="{% url 'home' %}" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 transition">
+                        Cancel
+                    </a>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition shadow-sm">
+                        Save Preferences
+                    </button>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <script src="{% static 'js/user_settings/user_settings.js' %}"></script>
 </body>
+
 </html>

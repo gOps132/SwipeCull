@@ -1,0 +1,4 @@
+/* User Settings Screen CSS */
+.settings-card {
+    transition: box-shadow 0.2s ease;
+}

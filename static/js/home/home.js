@@ -21,6 +21,7 @@ const history = [];  // { photo, action }
 let decideUrl = null;
 let undoUrl = null;
 let finalizeUrl = null;
+let sessionFolderName = '';
 let pendingRequest = false;
 
 function getCsrfToken() {
@@ -43,6 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
         decideUrl = data.decide_url || null;
         undoUrl = data.undo_url || null;
         finalizeUrl = data.finalize_url || null;
+        sessionFolderName = data.folder_name || '';
         if (Array.isArray(data.history)) {
             history.push(...data.history);
         }
@@ -258,21 +260,45 @@ function updateHistory() {
     });
 }
 
-// ── Done state ───────────────────────────────────────────────
+// ── Done state (Session Summary) ─────────────────────────────
 function showDoneState() {
     const cardWrapper = document.getElementById('card-wrapper');
     if (cardWrapper) {
+        const spaceLabel = spaceClearedMB >= 1024
+            ? `${(spaceClearedMB / 1024).toFixed(1)} GB`
+            : `${spaceClearedMB.toFixed(1)} MB`;
+        const subtitle = sessionFolderName
+            ? `Finished triaging <span class="font-semibold text-slate-700">${sessionFolderName}</span> (${TOTAL} files).`
+            : `You've triaged all ${TOTAL} photos.`;
         cardWrapper.innerHTML = `
-    <div class="flex flex-col items-center justify-center text-center rounded-3xl border-2 border-dashed border-slate-200 bg-slate-50 p-12 space-y-4" style="aspect-ratio: 3/4;">
-        <div class="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center">
-            <svg class="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+    <div class="w-full flex flex-col items-center justify-center text-center rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-200/80 p-8 space-y-5" style="aspect-ratio: 3/4;">
+        <div class="w-14 h-14 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center">
+            <svg class="w-7 h-7 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
             </svg>
         </div>
         <div>
-            <p class="text-lg font-bold text-slate-900">All done! 🎉</p>
-            <p class="text-sm text-slate-500 mt-1">You've triaged all ${TOTAL} photos.</p>
+            <p class="text-lg font-bold text-slate-900">Session Complete</p>
+            <p class="text-xs text-slate-500 mt-1">${subtitle}</p>
         </div>
+        <div class="w-full grid grid-cols-3 gap-2 pt-1">
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                <p class="text-base font-bold text-emerald-600">${keptCount}</p>
+                <p class="text-[10px] font-medium text-slate-400 uppercase tracking-wider mt-0.5">Kept</p>
+            </div>
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                <p class="text-base font-bold text-red-600">${trashedCount}</p>
+                <p class="text-[10px] font-medium text-slate-400 uppercase tracking-wider mt-0.5">Trashed</p>
+            </div>
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                <p class="text-base font-bold text-slate-900">${spaceLabel}</p>
+                <p class="text-[10px] font-medium text-slate-400 uppercase tracking-wider mt-0.5">Freed</p>
+            </div>
+        </div>
+        <button type="button" onclick="openNewSessionModal()"
+            class="w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition">
+            + Start New Session
+        </button>
     </div>
 `;
     }

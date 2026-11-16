@@ -141,7 +141,14 @@
                                 </svg>
                                 <span class="truncate">{{ s.folder_name|default:"Untitled Session" }}</span>
                             </div>
-                            <span class="text-[10px] {% if active_session and s.id == active_session.id %}bg-slate-200 text-slate-600 font-semibold rounded-full{% else %}text-slate-400{% endif %} px-1.5 py-0.5">{{ s.media_files.count }}</span>
+                            <span class="flex items-center gap-1 flex-shrink-0">
+                                {% if s.status == 'completed' %}
+                                <svg class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" title="Completed">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                                {% endif %}
+                                <span class="text-[10px] {% if active_session and s.id == active_session.id %}bg-slate-200 text-slate-600 font-semibold rounded-full{% else %}text-slate-400{% endif %} px-1.5 py-0.5">{{ s.media_files.count }}</span>
+                            </span>
                         </a>
                         {% endfor %}
                     {% else %}

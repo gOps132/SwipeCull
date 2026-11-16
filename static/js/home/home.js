@@ -23,6 +23,7 @@ let undoUrl = null;
 let finalizeUrl = null;
 let sessionFolderName = '';
 let pendingRequest = false;
+let isAnimating = false;
 let zoomLevel = 1;
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 3;
@@ -99,42 +100,49 @@ function loadPhoto(idx) {
     imgName.textContent = p.name;
     imgMeta.textContent = `${p.size} · ${p.dim}`;
     imgDate.textContent = p.date;
+
+    // Preload the next image so swiping feels instant.
+    if (PHOTOS[idx + 1] && PHOTOS[idx + 1].src) {
+        const nextImg = new Image();
+        nextImg.src = PHOTOS[idx + 1].src;
+    }
 }
 
 // ── Handle decision ─────────────────────────────────────────
-async function handleDecision(action) {
-    if (pendingRequest || currentIndex >= PHOTOS.length) return;
+function handleDecision(action) {
+    if (isAnimating || currentIndex >= PHOTOS.length) return;
+    isAnimating = true;
     const photo = PHOTOS[currentIndex];
 
-    if (decideUrl && photo.id) {
-        pendingRequest = true;
-        try {
-            const resp = await fetch(decideUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCsrfToken(),
-                },
-                body: JSON.stringify({ media_file_id: photo.id, decision: action }),
-            });
-            if (!resp.ok) return;
-            const res = await resp.json();
-            keptCount = res.kept_count;
-            trashedCount = res.trashed_count;
-            spaceClearedMB = res.space_cleared_mb;
-        } finally {
-            pendingRequest = false;
-        }
+    // Optimistic local state update so the animation never waits on the network.
+    if (action === 'trash') {
+        trashedCount++;
+        spaceClearedMB += photo.bytes;
     } else {
-        if (action === 'trash') {
-            trashedCount++;
-            spaceClearedMB += photo.bytes;
-        } else {
-            keptCount++;
-        }
+        keptCount++;
     }
 
-    // Animate card out
+    if (decideUrl && photo.id) {
+        fetch(decideUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken(),
+            },
+            body: JSON.stringify({ media_file_id: photo.id, decision: action }),
+        })
+            .then(resp => (resp.ok ? resp.json() : null))
+            .then(res => {
+                if (!res) return;
+                keptCount = res.kept_count;
+                trashedCount = res.trashed_count;
+                spaceClearedMB = res.space_cleared_mb;
+                updateUI();
+            })
+            .catch(() => {});
+    }
+
+    // Animate card out immediately
     card.classList.add(action === 'trash' ? 'swipe-left' : 'swipe-right');
 
     setTimeout(() => {
@@ -146,7 +154,8 @@ async function handleDecision(action) {
         updateUI();
 
         if (btnUndo) btnUndo.disabled = false;
-    }, 350);
+        isAnimating = false;
+    }, 220);
 }
 
 // ── Undo ─────────────────────────────────────────────────────
@@ -432,11 +441,16 @@ document.addEventListener('keydown', e => {
 function initDragEvents() {
     let startX = 0, dragging = false;
 
-    card.addEventListener('mousedown', e => { startX = e.clientX; dragging = true; });
-    card.addEventListener('mousemove', e => {
+    card.addEventListener('mousedown', e => {
+        if (isAnimating) return;
+        startX = e.clientX;
+        dragging = true;
+        card.classList.add('is-dragging');
+    });
+    document.addEventListener('mousemove', e => {
         if (!dragging) return;
         const dx = e.clientX - startX;
-        card.style.transform = `translateX(${dx * 0.3}px) rotate(${dx * 0.02}deg)`;
+        card.style.transform = `translate3d(${dx * 0.35}px, 0, 0) rotate(${dx * 0.02}deg)`;
 
         if (dx < -30) { hintTrash.style.opacity = '1'; hintKeep.style.opacity = '0'; }
         else if (dx > 30) { hintKeep.style.opacity = '1'; hintTrash.style.opacity = '0'; }
@@ -445,6 +459,7 @@ function initDragEvents() {
     document.addEventListener('mouseup', e => {
         if (!dragging) return;
         dragging = false;
+        card.classList.remove('is-dragging');
         const dx = e.clientX - startX;
         card.style.transform = '';
         if (hintTrash) hintTrash.style.opacity = '0';
@@ -455,11 +470,16 @@ function initDragEvents() {
     });
 
     // Touch support
-    card.addEventListener('touchstart', e => { startX = e.touches[0].clientX; dragging = true; }, { passive: true });
+    card.addEventListener('touchstart', e => {
+        if (isAnimating) return;
+        startX = e.touches[0].clientX;
+        dragging = true;
+        card.classList.add('is-dragging');
+    }, { passive: true });
     card.addEventListener('touchmove', e => {
         if (!dragging) return;
         const dx = e.touches[0].clientX - startX;
-        card.style.transform = `translateX(${dx * 0.3}px) rotate(${dx * 0.02}deg)`;
+        card.style.transform = `translate3d(${dx * 0.35}px, 0, 0) rotate(${dx * 0.02}deg)`;
         if (dx < -30) { hintTrash.style.opacity = '1'; hintKeep.style.opacity = '0'; }
         else if (dx > 30) { hintKeep.style.opacity = '1'; hintTrash.style.opacity = '0'; }
         else { hintTrash.style.opacity = '0'; hintKeep.style.opacity = '0'; }
@@ -467,6 +487,7 @@ function initDragEvents() {
     card.addEventListener('touchend', e => {
         if (!dragging) return;
         dragging = false;
+        card.classList.remove('is-dragging');
         const dx = e.changedTouches[0].clientX - startX;
         card.style.transform = '';
         if (hintTrash) hintTrash.style.opacity = '0';

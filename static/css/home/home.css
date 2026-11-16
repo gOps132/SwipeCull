@@ -15,30 +15,38 @@
 /* ── Swipe animation ── */
 @keyframes swipe-left {
     to {
-        transform: translateX(-120%) rotate(-12deg);
+        transform: translate3d(-110%, 0, 0) rotate(-10deg);
         opacity: 0;
     }
 }
 
 @keyframes swipe-right {
     to {
-        transform: translateX(120%) rotate(12deg);
+        transform: translate3d(110%, 0, 0) rotate(10deg);
         opacity: 0;
     }
 }
 
 .swipe-left {
-    animation: swipe-left 0.35s ease-in forwards;
+    animation: swipe-left 0.22s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 .swipe-right {
-    animation: swipe-right 0.35s ease-in forwards;
+    animation: swipe-right 0.22s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 /* ── Card drag ── */
 #triage-card {
-    transition: transform 0.08s ease, box-shadow 0.08s ease;
+    transition: transform 0.15s ease-out;
+    will-change: transform, opacity;
+    backface-visibility: hidden;
     cursor: grab;
+}
+
+#triage-card.is-dragging,
+#triage-card.swipe-left,
+#triage-card.swipe-right {
+    transition: none;
 }
 
 #triage-card:active {

@@ -78,14 +78,17 @@
             </a>
 
             <!-- Logout -->
-            <a href="{% url 'logout' %}"
-                class="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-900 transition px-2 py-1 rounded-md hover:bg-slate-100">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round"
-                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1" />
-                </svg>
-                Logout
-            </a>
+            <form method="post" action="{% url 'logout' %}" class="inline">
+                {% csrf_token %}
+                <button type="submit"
+                    class="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-900 transition px-2 py-1 rounded-md hover:bg-slate-100">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1" />
+                    </svg>
+                    Logout
+                </button>
+            </form>
 
             <!-- Avatar -->
             <a href="{% url 'profile' %}"

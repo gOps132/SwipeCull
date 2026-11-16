@@ -3,4 +3,7 @@ from . import views
 
 urlpatterns = [
     path('', views.home, name='home'),
+    path('session/<int:session_id>/', views.session_detail, name='session_detail'),
+    path('session/<int:session_id>/decide/', views.decide_file, name='decide_file'),
+    path('session/<int:session_id>/undo/', views.undo_decision, name='undo_decision'),
 ]

@@ -71,12 +71,26 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 
 # Database
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+import dj_database_url
+
+DATABASE_URL = os.getenv('DATABASE_URL')
+
+if DATABASE_URL:
+    DATABASES = {
+        'default': dj_database_url.parse(
+            os.environ.get('DATABASE_URL', DATABASE_URL),
+            conn_max_age=600,
+            ssl_require=True,
+        )
     }
-}
+    DATABASES['default']['DISABLE_SERVER_SIDE_CURSORS'] = True
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 
 # Password validation
@@ -112,6 +126,9 @@ STATIC_URL = 'static/'
 STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
+
+MEDIA_URL = 'media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # Email
 MAILERS = {

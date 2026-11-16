@@ -1,6 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en"{% if dark_mode %} class="dark"{% endif %}>
 
 <head>
     <meta charset="UTF-8">
@@ -17,6 +17,7 @@
 
     <!-- Feature CSS -->
     <link rel="stylesheet" href="{% static 'css/user_settings/user_settings.css' %}">
+    <link rel="stylesheet" href="{% static 'css/user_settings/dark_mode.css' %}">
 </head>
 
 <body class="bg-slate-50 min-h-screen font-sans text-slate-900 antialiased">

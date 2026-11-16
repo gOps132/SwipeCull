@@ -1,0 +1,74 @@
+/*
+ * Dark mode theme.
+ *
+ * Pages are styled with Tailwind's light utility classes (loaded from the CDN).
+ * Rather than adding `dark:` variants to every element, the server renders
+ * <html class="dark"> for users who enabled dark mode and this stylesheet
+ * remaps the neutral/accent utilities underneath it.
+ * `html.dark .x` out-ranks Tailwind's `.x`, so load order doesn't matter.
+ */
+
+html.dark {
+    color-scheme: dark; /* native controls, scrollbars, checkboxes */
+}
+
+/* ── Surfaces ── */
+html.dark body.bg-slate-50,
+html.dark .bg-slate-50 { background-color: #0b1120; }
+html.dark .bg-white { background-color: #0f172a; }
+html.dark .bg-white\/80 { background-color: rgba(15, 23, 42, 0.8); }
+html.dark .bg-slate-50\/60 { background-color: rgba(30, 41, 59, 0.5); }
+html.dark .bg-slate-100 { background-color: #1e293b; }
+html.dark .bg-slate-200 { background-color: #334155; }
+/* Primary buttons / logo tile: lighter than the card so they stay visible */
+html.dark .bg-slate-900 { background-color: #334155; }
+
+/* ── Text ── */
+html.dark .text-slate-900 { color: #f1f5f9; }
+html.dark .text-slate-800 { color: #e2e8f0; }
+html.dark .text-slate-700 { color: #cbd5e1; }
+html.dark .text-slate-600 { color: #a8b3c4; }
+html.dark .text-slate-500 { color: #94a3b8; }
+html.dark .text-slate-400 { color: #7d8ba1; }
+html.dark .text-slate-300 { color: #475569; }
+
+/* ── Borders ── */
+html.dark .border-slate-100,
+html.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]) { border-color: #1e293b; }
+html.dark .border-slate-200,
+html.dark .border-slate-200\/80 { border-color: #263449; }
+html.dark .border-slate-300 { border-color: #334155; }
+
+/* ── Hover / focus ── */
+html.dark .hover\:bg-slate-50:hover,
+html.dark .hover\:bg-slate-100:hover { background-color: #1e293b; }
+html.dark .hover\:bg-slate-800:hover { background-color: #475569; }
+html.dark .hover\:text-slate-900:hover,
+html.dark .hover\:text-slate-800:hover { color: #ffffff; }
+html.dark .hover\:ring-slate-400:hover { --tw-ring-color: #64748b; }
+
+/* ── Accents (tinted instead of pastel) ── */
+html.dark .bg-emerald-50 { background-color: rgba(16, 185, 129, 0.12); }
+html.dark .border-emerald-200 { border-color: rgba(16, 185, 129, 0.35); }
+html.dark .text-emerald-800,
+html.dark .text-emerald-700 { color: #6ee7b7; }
+html.dark .text-emerald-600 { color: #34d399; }
+
+html.dark .bg-red-100 { background-color: rgba(239, 68, 68, 0.15); }
+html.dark .text-red-600 { color: #f87171; }
+html.dark .hover\:bg-red-50\/60:hover { background-color: rgba(239, 68, 68, 0.1); }
+html.dark .hover\:border-red-200:hover { border-color: rgba(239, 68, 68, 0.4); }
+
+/* ── Form fields (rendered from Django forms) ── */
+html.dark input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+html.dark select,
+html.dark textarea {
+    background-color: #0b1120;
+    color: #f1f5f9;
+    border-color: #334155;
+}
+
+html.dark ::placeholder { color: #64748b; }
+
+/* ── Custom scrollbar from home.css ── */
+html.dark .custom-scroll::-webkit-scrollbar-thumb { background: #475569; }

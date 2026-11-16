@@ -1,5 +1,5 @@
-// ── Demo photo dataset ──────────────────────────────────────
-const PHOTOS = [
+// ── Demo photo dataset (fallback when no DB session exists) ──
+const DEMO_PHOTOS = [
     { src: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&auto=format&fit=crop&q=80', name: 'IMG_2024_001.jpg', size: '4.2 MB', dim: '4032 × 3024', date: 'Jun 12, 2024', bytes: 4.2 },
     { src: 'https://images.unsplash.com/photo-1501854140801-50d01698950b?w=600&auto=format&fit=crop&q=80', name: 'IMG_2024_002.jpg', size: '3.8 MB', dim: '4032 × 3024', date: 'Jun 13, 2024', bytes: 3.8 },
     { src: 'https://images.unsplash.com/photo-1470770903676-69b98201ea1c?w=600&auto=format&fit=crop&q=80', name: 'IMG_2024_003.jpg', size: '5.1 MB', dim: '4032 × 3024', date: 'Jun 14, 2024', bytes: 5.1 },
@@ -11,17 +11,41 @@ const PHOTOS = [
 ];
 
 // ── State ───────────────────────────────────────────────────
+let PHOTOS = [...DEMO_PHOTOS];
 let currentIndex = 0;
 let keptCount = 0;
 let trashedCount = 0;
 let spaceClearedMB = 0;
-const TOTAL = PHOTOS.length;
-const history = [];  // { photo, decision }
+let TOTAL = PHOTOS.length;
+const history = [];  // { photo, action }
+let decideUrl = null;
+let undoUrl = null;
+let pendingRequest = false;
+
+function getCsrfToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.getAttribute('content') : '';
+}
 
 // ── DOM refs ────────────────────────────────────────────────
 let card, img, imgName, imgMeta, imgDate, hintTrash, hintKeep, btnUndo;
 
 document.addEventListener('DOMContentLoaded', () => {
+    const sessionEl = document.getElementById('session-data');
+    if (sessionEl) {
+        const data = JSON.parse(sessionEl.textContent);
+        PHOTOS = data.photos || [];
+        TOTAL = data.total ?? PHOTOS.length;
+        keptCount = data.kept_count ?? 0;
+        trashedCount = data.trashed_count ?? 0;
+        spaceClearedMB = data.space_cleared_mb ?? 0;
+        decideUrl = data.decide_url || null;
+        undoUrl = data.undo_url || null;
+        if (Array.isArray(data.history)) {
+            history.push(...data.history);
+        }
+    }
+
     card = document.getElementById('triage-card');
     img = document.getElementById('triage-img');
     imgName = document.getElementById('img-name');
@@ -34,13 +58,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (card) {
         initDragEvents();
     }
+    if (btnUndo) {
+        btnUndo.disabled = history.length === 0;
+    }
+    updateUI();
     loadPhoto(0);
 });
 
 // ── Load photo ──────────────────────────────────────────────
 function loadPhoto(idx) {
     if (!img) return;
-    if (idx >= TOTAL) { showDoneState(); return; }
+    if (idx >= PHOTOS.length) { showDoneState(); return; }
     const p = PHOTOS[idx];
     img.src = p.src;
     imgName.textContent = p.name;
@@ -49,39 +77,87 @@ function loadPhoto(idx) {
 }
 
 // ── Handle decision ─────────────────────────────────────────
-function handleDecision(action) {
-    if (currentIndex >= TOTAL) return;
+async function handleDecision(action) {
+    if (pendingRequest || currentIndex >= PHOTOS.length) return;
     const photo = PHOTOS[currentIndex];
 
-    // Animate card out
-    card.classList.add(action === 'trash' ? 'swipe-left' : 'swipe-right');
-
-    setTimeout(() => {
-        card.classList.remove('swipe-left', 'swipe-right');
-
-        // Update state
-        history.push({ photo, action });
+    if (decideUrl && photo.id) {
+        pendingRequest = true;
+        try {
+            const resp = await fetch(decideUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken(),
+                },
+                body: JSON.stringify({ media_file_id: photo.id, decision: action }),
+            });
+            if (!resp.ok) return;
+            const res = await resp.json();
+            keptCount = res.kept_count;
+            trashedCount = res.trashed_count;
+            spaceClearedMB = res.space_cleared_mb;
+        } finally {
+            pendingRequest = false;
+        }
+    } else {
         if (action === 'trash') {
             trashedCount++;
             spaceClearedMB += photo.bytes;
         } else {
             keptCount++;
         }
+    }
+
+    // Animate card out
+    card.classList.add(action === 'trash' ? 'swipe-left' : 'swipe-right');
+
+    setTimeout(() => {
+        card.classList.remove('swipe-left', 'swipe-right');
+        history.push({ photo, action });
         currentIndex++;
 
         loadPhoto(currentIndex);
         updateUI();
 
-        // Enable undo
         if (btnUndo) btnUndo.disabled = false;
     }, 350);
 }
 
 // ── Undo ─────────────────────────────────────────────────────
-function handleUndo() {
-    if (!history.length) return;
-    const last = history.pop();
+async function handleUndo() {
+    if (pendingRequest || !history.length) return;
 
+    if (undoUrl) {
+        pendingRequest = true;
+        try {
+            const resp = await fetch(undoUrl, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': getCsrfToken() },
+            });
+            if (!resp.ok) return;
+            const res = await resp.json();
+            history.pop();
+            keptCount = res.kept_count;
+            trashedCount = res.trashed_count;
+            spaceClearedMB = res.space_cleared_mb;
+
+            // If we were on the done state, reload to restore the card DOM cleanly.
+            if (!document.getElementById('triage-card')) {
+                window.location.reload();
+                return;
+            }
+            PHOTOS.splice(currentIndex, 0, res.restored_photo);
+            loadPhoto(currentIndex);
+            updateUI();
+            if (!history.length && btnUndo) btnUndo.disabled = true;
+        } finally {
+            pendingRequest = false;
+        }
+        return;
+    }
+
+    const last = history.pop();
     if (last.action === 'trash') {
         trashedCount--;
         spaceClearedMB -= last.photo.bytes;

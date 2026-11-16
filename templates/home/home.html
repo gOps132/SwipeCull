@@ -136,39 +136,54 @@
                     <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-2 mb-2">Source
                         Folder</p>
 
-                    <button onclick="selectFolder(this)"
-                        class="folder-item w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs font-medium bg-slate-100 text-slate-900 transition text-left">
-                        <div class="flex items-center gap-2 truncate">
-                            <svg class="w-4 h-4 text-amber-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
-                            </svg>
-                            <span class="truncate">Google Photos / 2024</span>
-                        </div>
-                        <span
-                            class="text-[10px] bg-slate-200 text-slate-600 font-semibold px-1.5 py-0.5 rounded-full">8</span>
-                    </button>
+                    {% if sessions %}
+                        {% for s in sessions %}
+                        <a href="{% url 'session_detail' s.id %}"
+                            class="folder-item w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs transition text-left {% if active_session and s.id == active_session.id %}font-medium bg-slate-100 text-slate-900{% else %}text-slate-600 hover:bg-slate-50{% endif %}">
+                            <div class="flex items-center gap-2 truncate">
+                                <svg class="w-4 h-4 {% if active_session and s.id == active_session.id %}text-amber-500{% else %}text-slate-400{% endif %} flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+                                </svg>
+                                <span class="truncate">{{ s.folder_name|default:"Untitled Session" }}</span>
+                            </div>
+                            <span class="text-[10px] {% if active_session and s.id == active_session.id %}bg-slate-200 text-slate-600 font-semibold rounded-full{% else %}text-slate-400{% endif %} px-1.5 py-0.5">{{ s.media_files.count }}</span>
+                        </a>
+                        {% endfor %}
+                    {% else %}
+                        <button onclick="selectFolder(this)"
+                            class="folder-item w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs font-medium bg-slate-100 text-slate-900 transition text-left">
+                            <div class="flex items-center gap-2 truncate">
+                                <svg class="w-4 h-4 text-amber-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+                                </svg>
+                                <span class="truncate">Google Photos / 2024</span>
+                            </div>
+                            <span
+                                class="text-[10px] bg-slate-200 text-slate-600 font-semibold px-1.5 py-0.5 rounded-full">8</span>
+                        </button>
 
-                    <button onclick="selectFolder(this)"
-                        class="folder-item w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs text-slate-600 hover:bg-slate-50 transition text-left">
-                        <div class="flex items-center gap-2 truncate">
-                            <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
-                            </svg>
-                            <span class="truncate">Camera Uploads</span>
-                        </div>
-                        <span class="text-[10px] text-slate-400 px-1.5 py-0.5">142</span>
-                    </button>
+                        <button onclick="selectFolder(this)"
+                            class="folder-item w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs text-slate-600 hover:bg-slate-50 transition text-left">
+                            <div class="flex items-center gap-2 truncate">
+                                <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+                                </svg>
+                                <span class="truncate">Camera Uploads</span>
+                            </div>
+                            <span class="text-[10px] text-slate-400 px-1.5 py-0.5">142</span>
+                        </button>
 
-                    <button onclick="selectFolder(this)"
-                        class="folder-item w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs text-slate-600 hover:bg-slate-50 transition text-left">
-                        <div class="flex items-center gap-2 truncate">
-                            <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
-                            </svg>
-                            <span class="truncate">Screenshots</span>
-                        </div>
-                        <span class="text-[10px] text-slate-400 px-1.5 py-0.5">87</span>
-                    </button>
+                        <button onclick="selectFolder(this)"
+                            class="folder-item w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs text-slate-600 hover:bg-slate-50 transition text-left">
+                            <div class="flex items-center gap-2 truncate">
+                                <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+                                </svg>
+                                <span class="truncate">Screenshots</span>
+                            </div>
+                            <span class="text-[10px] text-slate-400 px-1.5 py-0.5">87</span>
+                        </button>
+                    {% endif %}
                 </div>
 
                 <!-- Storage footprint estimate -->
@@ -403,6 +418,11 @@
             </div>
         </div>
     </div>
+
+    {% if session_data %}
+        {{ session_data|json_script:"session-data" }}
+    {% endif %}
+    <meta name="csrf-token" content="{{ csrf_token }}">
 
     <!-- Feature JS -->
     <script src="{% static 'js/home/home.js' %}"></script>

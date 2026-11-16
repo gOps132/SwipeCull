@@ -6,4 +6,5 @@ urlpatterns = [
     path('session/<int:session_id>/', views.session_detail, name='session_detail'),
     path('session/<int:session_id>/decide/', views.decide_file, name='decide_file'),
     path('session/<int:session_id>/undo/', views.undo_decision, name='undo_decision'),
+    path('session/<int:session_id>/finalize/', views.finalize_session, name='finalize_session'),
 ]

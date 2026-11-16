@@ -87,6 +87,7 @@ def _render_home(request, active_session=None):
             'history': stats['history'],
             'decide_url': f'/session/{active_session.id}/decide/',
             'undo_url': f'/session/{active_session.id}/undo/',
+            'finalize_url': f'/session/{active_session.id}/finalize/',
         }
 
     return render(
@@ -175,6 +176,48 @@ def undo_decision(request, session_id):
     return JsonResponse({
         'ok': True,
         'restored_photo': restored_file,
+        'session_status': session.status,
+        'kept_count': stats['kept_count'],
+        'trashed_count': stats['trashed_count'],
+        'space_cleared_mb': stats['space_cleared_mb'],
+        'remaining': stats['remaining'],
+        'total': stats['total'],
+    })
+
+
+@login_required
+@require_POST
+def finalize_session(request, session_id):
+    session = get_object_or_404(CullSession, pk=session_id, user=request.user)
+    trashed_decisions = SwipeDecision.objects.filter(
+        session=session,
+        user=request.user,
+        decision='trash',
+    ).select_related('media_file')
+
+    trashed_files = [d.media_file for d in trashed_decisions]
+    deleted_count = len(trashed_files)
+    freed_mb = round(
+        sum(float(mf.file_size_mb) for mf in trashed_files if mf.file_size_mb is not None),
+        2,
+    )
+
+    if trashed_files:
+        MediaFile.objects.filter(id__in=[mf.id for mf in trashed_files]).delete()
+
+    stats = _session_stats(session, request.user)
+    session.total_files = stats['total']
+    update_fields = ['total_files']
+    if stats['remaining'] == 0 and session.status != 'completed':
+        session.status = 'completed'
+        session.completed_at = timezone.now()
+        update_fields.extend(['status', 'completed_at'])
+    session.save(update_fields=update_fields)
+
+    return JsonResponse({
+        'ok': True,
+        'deleted_count': deleted_count,
+        'freed_mb': freed_mb,
         'session_status': session.status,
         'kept_count': stats['kept_count'],
         'trashed_count': stats['trashed_count'],

@@ -20,6 +20,7 @@ let TOTAL = PHOTOS.length;
 const history = [];  // { photo, action }
 let decideUrl = null;
 let undoUrl = null;
+let finalizeUrl = null;
 let pendingRequest = false;
 
 function getCsrfToken() {
@@ -41,6 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
         spaceClearedMB = data.space_cleared_mb ?? 0;
         decideUrl = data.decide_url || null;
         undoUrl = data.undo_url || null;
+        finalizeUrl = data.finalize_url || null;
         if (Array.isArray(data.history)) {
             history.push(...data.history);
         }
@@ -304,10 +306,52 @@ function handleFinalize() {
 function closeModal() {
     document.getElementById('finalize-modal').classList.add('hidden');
 }
-function confirmFinalize() {
-    closeModal();
+function showToast(message) {
+    const existing = document.getElementById('cull-toast');
+    if (existing) existing.remove();
+    const toast = document.createElement('div');
+    toast.id = 'cull-toast';
+    toast.className = 'fixed bottom-5 right-5 z-50 bg-slate-900 text-white text-xs font-medium px-4 py-3 rounded-xl shadow-lg border border-slate-700 flex items-center gap-2 transition-opacity duration-300';
+    toast.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0"></span><span>${message}</span>`;
+    document.body.appendChild(toast);
     setTimeout(() => {
-        alert(`✅ Cleanup complete!\n\n${trashedCount} file${trashedCount !== 1 ? 's' : ''} permanently deleted.\nEstimated space freed: ${spaceClearedMB.toFixed(1)} MB`);
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+    }, 3500);
+}
+
+async function confirmFinalize() {
+    if (pendingRequest) return;
+    closeModal();
+
+    if (finalizeUrl) {
+        pendingRequest = true;
+        try {
+            const resp = await fetch(finalizeUrl, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': getCsrfToken() },
+            });
+            if (!resp.ok) return;
+            const res = await resp.json();
+            TOTAL = res.total;
+            keptCount = res.kept_count;
+            trashedCount = res.trashed_count;
+            spaceClearedMB = res.space_cleared_mb;
+            for (let i = history.length - 1; i >= 0; i--) {
+                if (history[i].action === 'trash') history.splice(i, 1);
+            }
+            if (btnUndo) btnUndo.disabled = history.length === 0;
+            updateUI();
+            if (res.remaining === 0) showDoneState();
+            showToast(`Cleanup complete: ${res.deleted_count} file${res.deleted_count !== 1 ? 's' : ''} removed (${res.freed_mb.toFixed(1)} MB freed).`);
+        } finally {
+            pendingRequest = false;
+        }
+        return;
+    }
+
+    setTimeout(() => {
+        showToast(`Cleanup complete: ${trashedCount} file${trashedCount !== 1 ? 's' : ''} removed (${spaceClearedMB.toFixed(1)} MB freed).`);
         trashedCount = 0;
         spaceClearedMB = 0;
         updateUI();

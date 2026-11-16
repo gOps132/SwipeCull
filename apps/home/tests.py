@@ -86,3 +86,28 @@ class HomeSwipeFlowTests(TestCase):
         self.assertEqual(du['remaining'], 1)
         self.assertEqual(du['session_status'], 'active')
         self.assertEqual(SwipeDecision.objects.filter(session=self.session).count(), 1)
+
+    def test_finalize_session_deletes_trashed_files(self):
+        self.client.force_login(self.user)
+        SwipeDecision.objects.create(
+            media_file=self.file1, session=self.session, user=self.user, decision='keep'
+        )
+        SwipeDecision.objects.create(
+            media_file=self.file2, session=self.session, user=self.user, decision='trash'
+        )
+
+        resp = self.client.post(reverse('finalize_session', args=[self.session.id]))
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(data['deleted_count'], 1)
+        self.assertEqual(data['freed_mb'], 2.5)
+        self.assertEqual(data['kept_count'], 1)
+        self.assertEqual(data['trashed_count'], 0)
+        self.assertEqual(data['total'], 1)
+        self.assertEqual(data['session_status'], 'completed')
+
+        self.session.refresh_from_db()
+        self.assertEqual(self.session.total_files, 1)
+        self.assertEqual(self.session.status, 'completed')
+        self.assertFalse(MediaFile.objects.filter(pk=self.file2.id).exists())
+        self.assertTrue(MediaFile.objects.filter(pk=self.file1.id).exists())

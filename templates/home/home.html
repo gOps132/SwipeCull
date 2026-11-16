@@ -224,10 +224,10 @@
         <!-- ════════════════════════════════════════
          CENTER STAGE: The Triage Canvas
     ════════════════════════════════════════ -->
-        <section class="flex-1 flex flex-col items-center justify-between p-6 overflow-hidden relative">
+        <section class="flex-1 flex flex-col items-center justify-between p-4 gap-3 overflow-hidden relative">
 
             <!-- Mobile remaining pill -->
-            <div class="sm:hidden w-full flex justify-center mb-2">
+            <div class="sm:hidden w-full flex justify-center mb-1">
                 <span id="mobile-remaining"
                     class="text-xs bg-white border border-slate-200 text-slate-600 font-medium px-3 py-1 rounded-full shadow-sm">
                     8 remaining
@@ -235,17 +235,16 @@
             </div>
 
             <!-- Triage Card Canvas -->
-            <div class="flex-1 w-full max-w-sm flex items-center justify-center relative select-none" id="card-wrapper">
+            <div class="flex-1 min-h-0 w-full max-w-4xl flex items-center justify-center relative select-none" id="card-wrapper">
 
                 <!-- The Swipable Card -->
                 <div id="triage-card"
-                    class="w-full bg-white rounded-2xl shadow-xl shadow-slate-200/80 border border-slate-200/80 overflow-hidden flex flex-col relative"
-                    style="aspect-ratio: 3/4;">
+                    class="w-full h-full bg-white rounded-2xl shadow-xl shadow-slate-200/80 border border-slate-200/80 overflow-hidden flex flex-col relative">
 
                     <!-- Photo container -->
-                    <div class="relative flex-1 bg-slate-900 overflow-hidden group">
+                    <div class="relative flex-1 min-h-0 bg-slate-900 overflow-hidden group flex items-center justify-center">
                         <img id="triage-img" src="" alt="Photo to triage"
-                            class="w-full h-full object-cover pointer-events-none transition-transform duration-200">
+                            class="w-full h-full object-contain pointer-events-none transition-transform duration-200">
 
                         <!-- Hint overlay: Trash (shown on left drag) -->
                         <div id="hint-trash" class="absolute inset-0 bg-red-600/30 flex items-center justify-center">
@@ -319,6 +318,18 @@
                 <kbd class="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[10px] font-mono">⌘Z</kbd>
                 Undo
             </p>
+
+            <!-- Zoom controls (bottom-left of page) -->
+            <div class="absolute bottom-4 left-4 z-20 flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
+                <button type="button" id="btn-zoom-out" onclick="adjustZoom(-0.25)"
+                    class="w-7 h-7 flex items-center justify-center rounded-lg text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition text-sm font-bold"
+                    title="Zoom out" aria-label="Zoom out" disabled>−</button>
+                <span id="zoom-level"
+                    class="text-[11px] font-semibold text-slate-600 px-1.5 min-w-[3rem] text-center select-none">100%</span>
+                <button type="button" id="btn-zoom-in" onclick="adjustZoom(0.25)"
+                    class="w-7 h-7 flex items-center justify-center rounded-lg text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition text-sm font-bold"
+                    title="Zoom in" aria-label="Zoom in">+</button>
+            </div>
 
         </section>
 

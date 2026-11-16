@@ -23,6 +23,9 @@ let undoUrl = null;
 let finalizeUrl = null;
 let sessionFolderName = '';
 let pendingRequest = false;
+let zoomLevel = 1;
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 3;
 
 function getCsrfToken() {
     const meta = document.querySelector('meta[name="csrf-token"]');
@@ -69,10 +72,28 @@ document.addEventListener('DOMContentLoaded', () => {
     loadPhoto(0);
 });
 
+// ── Zoom controls ────────────────────────────────────────────
+function updateZoomUI() {
+    if (img) img.style.transform = `scale(${zoomLevel})`;
+    const zoomLabel = document.getElementById('zoom-level');
+    const btnOut = document.getElementById('btn-zoom-out');
+    const btnIn = document.getElementById('btn-zoom-in');
+    if (zoomLabel) zoomLabel.textContent = `${Math.round(zoomLevel * 100)}%`;
+    if (btnOut) btnOut.disabled = zoomLevel <= MIN_ZOOM;
+    if (btnIn) btnIn.disabled = zoomLevel >= MAX_ZOOM;
+}
+
+function adjustZoom(delta) {
+    zoomLevel = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.round((zoomLevel + delta) * 100) / 100));
+    updateZoomUI();
+}
+
 // ── Load photo ──────────────────────────────────────────────
 function loadPhoto(idx) {
     if (!img) return;
     if (idx >= PHOTOS.length) { showDoneState(); return; }
+    zoomLevel = MIN_ZOOM;
+    updateZoomUI();
     const p = PHOTOS[idx];
     img.src = p.src;
     imgName.textContent = p.name;
@@ -271,7 +292,7 @@ function showDoneState() {
             ? `Finished triaging <span class="font-semibold text-slate-700">${sessionFolderName}</span> (${TOTAL} files).`
             : `You've triaged all ${TOTAL} photos.`;
         cardWrapper.innerHTML = `
-    <div class="w-full flex flex-col items-center justify-center text-center rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-200/80 p-8 space-y-5" style="aspect-ratio: 3/4;">
+    <div class="w-full max-w-md flex flex-col items-center justify-center text-center rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-200/80 p-8 space-y-5">
         <div class="w-14 h-14 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center">
             <svg class="w-7 h-7 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>

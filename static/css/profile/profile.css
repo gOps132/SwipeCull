@@ -1,0 +1,4 @@
+/* Profile Screen CSS */
+.profile-card {
+    transition: box-shadow 0.2s ease;
+}

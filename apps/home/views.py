@@ -92,12 +92,19 @@ def _render_home(request, active_session=None):
             'finalize_url': f'/session/{active_session.id}/finalize/',
         }
 
+    drive_connection = (
+        active_session.drive_connection
+        if active_session is not None
+        else DriveConnection.objects.filter(user=request.user, is_active=True).first()
+    )
+
     return render(
         request,
         'home/home.html',
         {
             'sessions': sessions,
             'active_session': active_session,
+            'drive_connection': drive_connection,
             'session_data': session_data,
         },
     )

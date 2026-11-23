@@ -1,9 +1,12 @@
+import csv
+from decimal import Decimal
 import json
 from uuid import uuid4
 
 from django.contrib.auth.decorators import login_required
-from django.db.models import Subquery
-from django.http import HttpResponseBadRequest, JsonResponse
+from django.db.models import Count, Q, Subquery, Sum
+from django.db.models.functions import Coalesce
+from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -262,22 +265,78 @@ def finalize_session(request, session_id):
     })
 
 
-@login_required
-def decision_log(request):
-    """JOIN implementation: retrieve SwipeDecisions joined with MediaFile and CullSession."""
+def _filtered_decisions(request):
+    """Return user's SwipeDecisions joined with MediaFile & CullSession, filtered by GET params."""
     decisions = (
         SwipeDecision.objects.filter(user=request.user)
         .select_related('media_file', 'session')
         .order_by('-decided_at', '-id')
     )
+    decision_filter = request.GET.get('decision', '').strip()
+    session_filter = request.GET.get('session', '').strip()
+    query = request.GET.get('q', '').strip()
+
+    if decision_filter in ('keep', 'trash'):
+        decisions = decisions.filter(decision=decision_filter)
+    if session_filter.isdigit():
+        decisions = decisions.filter(session_id=int(session_filter))
+    if query:
+        decisions = decisions.filter(media_file__file_name__icontains=query)
+
+    return decisions, {
+        'decision': decision_filter,
+        'session': session_filter,
+        'q': query,
+    }
+
+
+@login_required
+def decision_log(request):
+    """JOIN implementation: retrieve SwipeDecisions joined with MediaFile and CullSession."""
+    decisions, filters = _filtered_decisions(request)
+    summary = decisions.aggregate(
+        total=Count('id'),
+        kept=Count('id', filter=Q(decision='keep')),
+        trashed=Count('id', filter=Q(decision='trash')),
+        trashed_mb=Coalesce(
+            Sum('media_file__file_size_mb', filter=Q(decision='trash')),
+            Decimal('0.00'),
+        ),
+    )
+    user_sessions = CullSession.objects.filter(user=request.user).order_by('-created_at')
     return render(
         request,
         'home/decision_log.html',
         {
             'decisions': decisions,
+            'summary': summary,
+            'user_sessions': user_sessions,
+            'filters': filters,
             'generated_sql': str(decisions.query),
         },
     )
+
+
+@login_required
+def export_decisions_csv(request):
+    """Export filtered SwipeDecisions as a CSV file."""
+    decisions, _ = _filtered_decisions(request)
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="swipecull_decisions.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow(['ID', 'File Name', 'Type', 'Size (MB)', 'Session Folder', 'Decision', 'Decided At'])
+    for d in decisions:
+        writer.writerow([
+            d.id,
+            d.media_file.file_name,
+            d.media_file.get_file_type_display(),
+            f'{d.media_file.file_size_mb:.2f}' if d.media_file.file_size_mb is not None else '',
+            d.session.folder_name,
+            d.get_decision_display(),
+            d.decided_at.strftime('%Y-%m-%d %H:%M:%S'),
+        ])
+    return response
 
 
 @login_required

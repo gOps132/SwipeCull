@@ -4,6 +4,7 @@ from . import views
 urlpatterns = [
     path('', views.home, name='home'),
     path('decisions/', views.decision_log, name='decision_log'),
+    path('decisions/export/', views.export_decisions_csv, name='export_decisions_csv'),
     path('sessions/with-decisions/', views.sessions_with_decisions, name='sessions_with_decisions'),
     path('session/create/', views.create_session, name='create_session'),
     path('session/<int:session_id>/', views.session_detail, name='session_detail'),

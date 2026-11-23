@@ -186,3 +186,28 @@ class HomeSwipeFlowTests(TestCase):
         sql = resp.context['generated_sql']
         self.assertIn('IN (SELECT', sql.upper())
         self.assertIn('swipe_decision', sql)
+
+    def test_decision_log_filtering_summary_and_csv_export(self):
+        SwipeDecision.objects.create(
+            media_file=self.file1, session=self.session, user=self.user, decision='keep'
+        )
+        SwipeDecision.objects.create(
+            media_file=self.file2, session=self.session, user=self.user, decision='trash'
+        )
+        self.client.force_login(self.user)
+
+        resp = self.client.get(reverse('decision_log'), {'decision': 'trash', 'q': 'IMG_02'})
+        self.assertEqual(resp.status_code, 200)
+        decisions = list(resp.context['decisions'])
+        self.assertEqual(len(decisions), 1)
+        self.assertEqual(decisions[0].media_file.file_name, 'IMG_02.jpg')
+        self.assertEqual(resp.context['summary']['trashed'], 1)
+        self.assertEqual(resp.context['summary']['kept'], 0)
+        self.assertEqual(float(resp.context['summary']['trashed_mb']), 2.5)
+
+        csv_resp = self.client.get(reverse('export_decisions_csv'), {'decision': 'keep'})
+        self.assertEqual(csv_resp.status_code, 200)
+        self.assertEqual(csv_resp['Content-Type'], 'text/csv')
+        body = csv_resp.content.decode('utf-8')
+        self.assertIn('IMG_01.jpg', body)
+        self.assertNotIn('IMG_02.jpg', body)

@@ -58,17 +58,88 @@
     </header>
 
     <main class="max-w-5xl mx-auto px-6 py-8 space-y-6">
-        <div class="flex items-center justify-between">
+        <div class="flex flex-wrap items-center justify-between gap-4">
             <div>
                 <h1 class="text-xl font-bold text-slate-900">Swipe Decision Log</h1>
                 <p class="text-sm text-slate-500 mt-1">
                     History of your keep and trash decisions across sessions.
                 </p>
             </div>
-            <span class="text-xs font-medium bg-slate-900 text-white px-3 py-1.5 rounded-full">
-                {{ decisions|length }} decision{{ decisions|length|pluralize }}
-            </span>
+            <div class="flex items-center gap-2.5">
+                <a href="{% url 'export_decisions_csv' %}?decision={{ filters.decision|urlencode }}&session={{ filters.session|urlencode }}&q={{ filters.q|urlencode }}"
+                    class="inline-flex items-center gap-1.5 text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 px-3 py-1.5 rounded-lg shadow-sm transition">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
+                    </svg>
+                    Export CSV
+                </a>
+                <span class="text-xs font-medium bg-slate-900 text-white px-3 py-1.5 rounded-full">
+                    {{ summary.total }} decision{{ summary.total|pluralize }}
+                </span>
+            </div>
         </div>
+
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Total Shown</p>
+                <p class="text-2xl font-bold text-slate-900 mt-1">{{ summary.total }}</p>
+            </div>
+            <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                <p class="text-[11px] font-semibold text-emerald-600 uppercase tracking-wider">Kept</p>
+                <p class="text-2xl font-bold text-emerald-700 mt-1">{{ summary.kept }}</p>
+            </div>
+            <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                <p class="text-[11px] font-semibold text-rose-600 uppercase tracking-wider">Trashed</p>
+                <p class="text-2xl font-bold text-rose-700 mt-1">{{ summary.trashed }}</p>
+            </div>
+            <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Space Marked</p>
+                <p class="text-2xl font-bold text-slate-900 mt-1">{{ summary.trashed_mb|floatformat:2 }} <span class="text-xs font-medium text-slate-500">MB</span></p>
+            </div>
+        </div>
+
+        <!-- Filter & Search Bar -->
+        <form method="get" action="{% url 'decision_log' %}" class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-wrap items-end gap-3">
+            <div class="flex-1 min-w-[180px]">
+                <label for="filter-q" class="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Search File</label>
+                <input id="filter-q" type="text" name="q" value="{{ filters.q }}" placeholder="e.g. IMG_0001.jpg"
+                    class="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900">
+            </div>
+            <div class="w-40">
+                <label for="filter-decision" class="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Decision</label>
+                <select id="filter-decision" name="decision"
+                    class="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-slate-900">
+                    <option value="">All Decisions</option>
+                    <option value="keep" {% if filters.decision == 'keep' %}selected{% endif %}>Keep</option>
+                    <option value="trash" {% if filters.decision == 'trash' %}selected{% endif %}>Trash</option>
+                </select>
+            </div>
+            <div class="w-48">
+                <label for="filter-session" class="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Session</label>
+                <select id="filter-session" name="session"
+                    class="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-slate-900">
+                    <option value="">All Sessions</option>
+                    {% for s in user_sessions %}
+                    <option value="{{ s.id }}" {% if filters.session == s.id|stringformat:"s" %}selected{% endif %}>
+                        {{ s.folder_name|default:"Untitled Session" }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex items-center gap-2">
+                <button type="submit"
+                    class="px-4 py-1.5 text-xs font-semibold bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition">
+                    Apply
+                </button>
+                {% if filters.q or filters.decision or filters.session %}
+                <a href="{% url 'decision_log' %}"
+                    class="px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 border border-slate-200 rounded-lg hover:bg-slate-50 transition">
+                    Reset
+                </a>
+                {% endif %}
+            </div>
+        </form>
 
         <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
             <div class="overflow-x-auto">

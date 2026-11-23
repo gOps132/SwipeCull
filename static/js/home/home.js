@@ -271,10 +271,15 @@ function updateHistory() {
     // Show last 5 in reverse
     [...history].reverse().slice(0, 5).forEach(({ photo, action }) => {
         const isTrash = action === 'trash';
+        const escapedName = String(photo.name || '')
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
         const li = document.createElement('li');
         li.className = 'px-4 py-2.5 flex items-center gap-3';
         li.innerHTML = `
-    <img src="${photo.src}" alt="" class="w-9 h-9 rounded-lg object-cover flex-shrink-0 border border-slate-100">
+    <img src="${photo.src}" alt="${escapedName}" class="w-9 h-9 rounded-lg object-cover flex-shrink-0 border border-slate-100">
     <div class="flex-1 min-w-0">
         <p class="text-xs font-medium text-slate-700 truncate">${photo.name}</p>
         <p class="text-[10px] text-slate-400">${photo.size}</p>

@@ -360,3 +360,55 @@ def sessions_with_decisions(request):
             'generated_sql': str(sessions.query),
         },
     )
+
+
+@login_required
+def analytics_view(request):
+    """Aggregate storage, keep/trash ratios, and per-session progress for the user."""
+    sessions = list(
+        CullSession.objects.filter(user=request.user)
+        .select_related('drive_connection')
+        .annotate(
+            kept_count=Count('swipe_decisions', filter=Q(swipe_decisions__decision='keep')),
+            trashed_count=Count('swipe_decisions', filter=Q(swipe_decisions__decision='trash')),
+            decided_count=Count('swipe_decisions'),
+            trashed_mb=Coalesce(
+                Sum(
+                    'swipe_decisions__media_file__file_size_mb',
+                    filter=Q(swipe_decisions__decision='trash'),
+                ),
+                Decimal('0.00'),
+            ),
+        )
+        .order_by('-created_at')
+    )
+
+    total_kept = sum(s.kept_count for s in sessions)
+    total_trashed = sum(s.trashed_count for s in sessions)
+    total_decided = total_kept + total_trashed
+    total_trashed_mb = sum((s.trashed_mb for s in sessions), Decimal('0.00'))
+    keep_rate = round((total_kept / total_decided) * 100) if total_decided else 0
+
+    for s in sessions:
+        s.progress_pct = min(100, round((s.decided_count / s.total_files) * 100)) if s.total_files else 0
+
+    overview = {
+        'total_sessions': len(sessions),
+        'active_sessions': sum(1 for s in sessions if s.status == 'active'),
+        'completed_sessions': sum(1 for s in sessions if s.status == 'completed'),
+        'total_kept': total_kept,
+        'total_trashed': total_trashed,
+        'total_decided': total_decided,
+        'keep_rate': keep_rate,
+        'trash_rate': 100 - keep_rate if total_decided else 0,
+        'total_trashed_mb': total_trashed_mb,
+    }
+
+    return render(
+        request,
+        'home/analytics.html',
+        {
+            'sessions': sessions,
+            'overview': overview,
+        },
+    )

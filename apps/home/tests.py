@@ -211,3 +211,20 @@ class HomeSwipeFlowTests(TestCase):
         body = csv_resp.content.decode('utf-8')
         self.assertIn('IMG_01.jpg', body)
         self.assertNotIn('IMG_02.jpg', body)
+
+    def test_analytics_view_aggregations(self):
+        SwipeDecision.objects.create(
+            media_file=self.file1, session=self.session, user=self.user, decision='keep'
+        )
+        SwipeDecision.objects.create(
+            media_file=self.file2, session=self.session, user=self.user, decision='trash'
+        )
+        self.client.force_login(self.user)
+        resp = self.client.get(reverse('analytics'))
+        self.assertEqual(resp.status_code, 200)
+        overview = resp.context['overview']
+        self.assertEqual(overview['total_sessions'], 1)
+        self.assertEqual(overview['total_kept'], 1)
+        self.assertEqual(overview['total_trashed'], 1)
+        self.assertEqual(overview['keep_rate'], 50)
+        self.assertEqual(float(overview['total_trashed_mb']), 2.5)

@@ -3,6 +3,7 @@ from . import views
 
 urlpatterns = [
     path('', views.home, name='home'),
+    path('analytics/', views.analytics_view, name='analytics'),
     path('decisions/', views.decision_log, name='decision_log'),
     path('decisions/export/', views.export_decisions_csv, name='export_decisions_csv'),
     path('sessions/with-decisions/', views.sessions_with_decisions, name='sessions_with_decisions'),

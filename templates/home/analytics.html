@@ -1,0 +1,185 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en"{% if dark_mode %} class="dark"{% endif %}>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SwipeCull — Storage Analytics</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+                    },
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="{% static 'css/user_settings/dark_mode.css' %}">
+</head>
+
+<body class="bg-slate-50 min-h-screen font-sans text-slate-900 antialiased">
+
+    <header class="bg-white border-b border-slate-200 h-14 flex items-center px-5 justify-between sticky top-0 z-30">
+        <a href="{% url 'home' %}" class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded-lg bg-slate-900 flex items-center justify-center">
+                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 7h18M3 12h18M3 17h18" />
+                </svg>
+            </div>
+            <span class="text-[15px] font-bold tracking-tight text-slate-900">SwipeCull</span>
+        </a>
+
+        <div class="flex items-center gap-3">
+            <a href="{% url 'home' %}"
+                class="text-xs font-medium text-slate-600 hover:text-slate-900 transition px-2.5 py-1 rounded-md hover:bg-slate-100">
+                Dashboard
+            </a>
+            <a href="{% url 'analytics' %}"
+                class="text-xs font-semibold text-slate-900 bg-slate-100 px-2.5 py-1 rounded-md">
+                Analytics
+            </a>
+            <a href="{% url 'decision_log' %}"
+                class="text-xs font-medium text-slate-600 hover:text-slate-900 transition px-2.5 py-1 rounded-md hover:bg-slate-100">
+                Decision Log
+            </a>
+            <a href="{% url 'sessions_with_decisions' %}"
+                class="text-xs font-medium text-slate-600 hover:text-slate-900 transition px-2.5 py-1 rounded-md hover:bg-slate-100">
+                Active Sessions
+            </a>
+            <a href="{% url 'profile' %}"
+                class="w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center text-white text-xs font-semibold select-none hover:ring-2 hover:ring-slate-400 transition"
+                title="View Profile">
+                {{ request.user.username|first|upper }}
+            </a>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-6 py-8 space-y-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-xl font-bold text-slate-900">Storage &amp; Session Analytics</h1>
+                <p class="text-sm text-slate-500 mt-1">
+                    Overview of your culling progress, keep/trash ratio, and recoverable space across all folders.
+                </p>
+            </div>
+            <a href="{% url 'home' %}"
+                class="text-xs font-semibold bg-slate-900 text-white px-3.5 py-2 rounded-lg hover:bg-slate-800 transition">
+                Back to Swiping
+            </a>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Total Sessions</p>
+                <p class="text-2xl font-bold text-slate-900 mt-1">{{ overview.total_sessions }}</p>
+                <p class="text-[11px] text-slate-500 mt-1">{{ overview.active_sessions }} active · {{ overview.completed_sessions }} completed</p>
+            </div>
+            <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Files Triaged</p>
+                <p class="text-2xl font-bold text-slate-900 mt-1">{{ overview.total_decided }}</p>
+                <p class="text-[11px] text-slate-500 mt-1">{{ overview.total_kept }} kept · {{ overview.total_trashed }} trashed</p>
+            </div>
+            <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                <p class="text-[11px] font-semibold text-emerald-600 uppercase tracking-wider">Keep Rate</p>
+                <p class="text-2xl font-bold text-emerald-700 mt-1">{{ overview.keep_rate }}%</p>
+                <p class="text-[11px] text-slate-500 mt-1">{{ overview.trash_rate }}% marked for trash</p>
+            </div>
+            <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                <p class="text-[11px] font-semibold text-rose-600 uppercase tracking-wider">Space Marked</p>
+                <p class="text-2xl font-bold text-rose-700 mt-1">{{ overview.total_trashed_mb|floatformat:2 }} <span class="text-xs font-medium text-slate-500">MB</span></p>
+                <p class="text-[11px] text-slate-500 mt-1">Across pending trash decisions</p>
+            </div>
+        </div>
+
+        <!-- Keep vs Trash Ratio Bar -->
+        <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-2.5">
+            <div class="flex items-center justify-between text-xs font-semibold">
+                <span class="text-emerald-700">Keep ({{ overview.total_kept }})</span>
+                <span class="text-slate-500">Decision Split</span>
+                <span class="text-rose-700">Trash ({{ overview.total_trashed }})</span>
+            </div>
+            <div class="w-full h-3 rounded-full bg-slate-100 overflow-hidden flex">
+                {% if overview.total_decided > 0 %}
+                <div class="bg-emerald-500 h-full transition-all" style="width: {{ overview.keep_rate }}%"></div>
+                <div class="bg-rose-500 h-full transition-all" style="width: {{ overview.trash_rate }}%"></div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Per-Session Breakdown -->
+        <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+            <div class="px-5 py-3.5 border-b border-slate-200 flex items-center justify-between">
+                <h2 class="text-sm font-semibold text-slate-900">Session Breakdown</h2>
+                <span class="text-xs text-slate-500">{{ sessions|length }} folder{{ sessions|length|pluralize }}</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                            <th class="px-4 py-3">Folder</th>
+                            <th class="px-4 py-3">Provider</th>
+                            <th class="px-4 py-3">Progress</th>
+                            <th class="px-4 py-3">Kept</th>
+                            <th class="px-4 py-3">Trashed</th>
+                            <th class="px-4 py-3">Space Marked</th>
+                            <th class="px-4 py-3">Status</th>
+                            <th class="px-4 py-3 text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 text-sm">
+                        {% for s in sessions %}
+                        <tr class="hover:bg-slate-50 transition">
+                            <td class="px-4 py-3 font-medium text-slate-900">{{ s.folder_name|default:"Untitled Session" }}</td>
+                            <td class="px-4 py-3 text-slate-600 text-xs">{{ s.drive_connection.get_provider_display }}</td>
+                            <td class="px-4 py-3 w-40">
+                                <div class="flex items-center gap-2">
+                                    <div class="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                        <div class="bg-slate-900 h-full rounded-full" style="width: {{ s.progress_pct }}%"></div>
+                                    </div>
+                                    <span class="text-[11px] font-medium text-slate-500 whitespace-nowrap">{{ s.decided_count }}/{{ s.total_files }}</span>
+                                </div>
+                            </td>
+                            <td class="px-4 py-3 text-emerald-700 font-medium">{{ s.kept_count }}</td>
+                            <td class="px-4 py-3 text-rose-700 font-medium">{{ s.trashed_count }}</td>
+                            <td class="px-4 py-3 text-slate-700">{{ s.trashed_mb|floatformat:2 }} MB</td>
+                            <td class="px-4 py-3">
+                                {% if s.status == 'completed' %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    Completed
+                                </span>
+                                {% else %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                                    {{ s.get_status_display }}
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-4 py-3 text-right">
+                                <a href="{% url 'session_detail' s.id %}"
+                                    class="text-xs font-medium text-slate-900 hover:underline">
+                                    Open &rarr;
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="px-4 py-10 text-center text-slate-500">
+                                No sessions created yet. Head to the <a href="{% url 'home' %}" class="text-slate-900 font-medium underline">Dashboard</a> to create one.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+</body>
+</html>

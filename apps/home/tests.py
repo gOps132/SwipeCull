@@ -228,3 +228,29 @@ class HomeSwipeFlowTests(TestCase):
         self.assertEqual(overview['total_trashed'], 1)
         self.assertEqual(overview['keep_rate'], 50)
         self.assertEqual(float(overview['total_trashed_mb']), 2.5)
+
+    def test_create_session_with_provider_and_delete_session(self):
+        self.client.force_login(self.user)
+        resp = self.client.post(
+            reverse('create_session'),
+            data={'folder_name': 'Dropbox Backup', 'provider': 'dropbox', 'count': 4},
+        )
+        self.assertEqual(resp.status_code, 302)
+        created = CullSession.objects.get(user=self.user, folder_name='Dropbox Backup')
+        self.assertEqual(created.drive_connection.provider, 'dropbox')
+        self.assertEqual(created.total_files, 4)
+
+        # Other user cannot delete this session
+        self.client.force_login(self.other)
+        forbidden = self.client.post(reverse('delete_session', args=[created.id]))
+        self.assertEqual(forbidden.status_code, 404)
+        self.assertTrue(CullSession.objects.filter(pk=created.id).exists())
+
+        # Owner can delete and redirect back to analytics
+        self.client.force_login(self.user)
+        deleted = self.client.post(
+            reverse('delete_session', args=[created.id]),
+            data={'next': reverse('analytics')},
+        )
+        self.assertRedirects(deleted, reverse('analytics'))
+        self.assertFalse(CullSession.objects.filter(pk=created.id).exists())

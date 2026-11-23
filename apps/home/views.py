@@ -129,6 +129,10 @@ def session_detail(request, session_id):
 @require_POST
 def create_session(request):
     folder_name = request.POST.get('folder_name', '').strip() or 'New Photo Session'
+    valid_providers = {choice[0] for choice in DriveConnection.PROVIDER_CHOICES}
+    provider = request.POST.get('provider', 'google_drive').strip()
+    if provider not in valid_providers:
+        provider = 'google_drive'
     try:
         count = int(request.POST.get('count', 10))
     except (TypeError, ValueError):
@@ -137,7 +141,7 @@ def create_session(request):
 
     connection, _ = DriveConnection.objects.get_or_create(
         user=request.user,
-        provider='google_drive',
+        provider=provider,
         defaults={'access_token': 'demo-token'},
     )
     session = CullSession.objects.create(
@@ -148,6 +152,17 @@ def create_session(request):
     )
     populate_demo_files(session, count=count)
     return redirect('session_detail', session_id=session.id)
+
+
+@login_required
+@require_POST
+def delete_session(request, session_id):
+    session = get_object_or_404(CullSession, pk=session_id, user=request.user)
+    session.delete()
+    next_url = request.POST.get('next', '')
+    if next_url.startswith('/'):
+        return redirect(next_url)
+    return redirect('home')
 
 
 @login_required

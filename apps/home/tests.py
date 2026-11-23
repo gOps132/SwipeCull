@@ -261,3 +261,12 @@ class HomeSwipeFlowTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, 'shortcuts-modal')
         self.assertContains(resp, reverse('analytics'))
+
+    def test_profile_and_settings_render_unified_nav_and_favicon(self):
+        self.client.force_login(self.user)
+        for url_name in ('profile', 'user_settings'):
+            resp = self.client.get(reverse(url_name))
+            self.assertEqual(resp.status_code, 200)
+            self.assertContains(resp, reverse('analytics'))
+            self.assertContains(resp, reverse('decision_log'))
+            self.assertContains(resp, 'rel="icon"')

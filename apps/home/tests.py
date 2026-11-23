@@ -123,3 +123,66 @@ class HomeSwipeFlowTests(TestCase):
         self.assertEqual(created.total_files, 6)
         self.assertEqual(created.media_files.count(), 6)
         self.assertRedirects(resp, reverse('session_detail', args=[created.id]))
+
+    def test_decision_log_join_view(self):
+        SwipeDecision.objects.create(
+            media_file=self.file1, session=self.session, user=self.user, decision='keep'
+        )
+        other_conn = DriveConnection.objects.create(user=self.other, access_token='other-demo')
+        other_session = CullSession.objects.create(
+            user=self.other, drive_connection=other_conn, folder_name='Other Folder', folder_id='other-1'
+        )
+        other_file = MediaFile.objects.create(
+            session=other_session, drive_file_id='other-f-1', file_name='OTHER.jpg'
+        )
+        SwipeDecision.objects.create(
+            media_file=other_file, session=other_session, user=self.other, decision='trash'
+        )
+
+        self.client.force_login(self.user)
+        resp = self.client.get(reverse('decision_log'))
+        self.assertEqual(resp.status_code, 200)
+        decisions = list(resp.context['decisions'])
+        self.assertEqual(len(decisions), 1)
+        self.assertEqual(decisions[0].media_file.file_name, 'IMG_01.jpg')
+        self.assertEqual(decisions[0].session.folder_name, 'Trip Photos')
+        sql = resp.context['generated_sql']
+        self.assertIn('JOIN', sql.upper())
+        self.assertIn('media_file', sql)
+        self.assertIn('cull_session', sql)
+
+    def test_sessions_with_decisions_subquery_view(self):
+        empty_session = CullSession.objects.create(
+            user=self.user,
+            drive_connection=self.conn,
+            folder_name='Empty Session',
+            folder_id='empty-1',
+            status='active',
+        )
+        completed_session = CullSession.objects.create(
+            user=self.user,
+            drive_connection=self.conn,
+            folder_name='Completed Session',
+            folder_id='comp-1',
+            status='completed',
+        )
+        comp_file = MediaFile.objects.create(
+            session=completed_session, drive_file_id='comp-f-1', file_name='COMP.jpg'
+        )
+        SwipeDecision.objects.create(
+            media_file=self.file1, session=self.session, user=self.user, decision='keep'
+        )
+        SwipeDecision.objects.create(
+            media_file=comp_file, session=completed_session, user=self.user, decision='keep'
+        )
+
+        self.client.force_login(self.user)
+        resp = self.client.get(reverse('sessions_with_decisions'))
+        self.assertEqual(resp.status_code, 200)
+        sessions = list(resp.context['sessions'])
+        self.assertEqual(sessions, [self.session])
+        self.assertNotIn(empty_session, sessions)
+        self.assertNotIn(completed_session, sessions)
+        sql = resp.context['generated_sql']
+        self.assertIn('IN (SELECT', sql.upper())
+        self.assertIn('swipe_decision', sql)

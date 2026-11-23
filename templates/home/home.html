@@ -66,6 +66,16 @@
                 Drive Connected
             </div>
 
+            <!-- Navigation links -->
+            <a href="{% url 'decision_log' %}"
+                class="text-xs font-medium text-slate-600 hover:text-slate-900 transition px-2.5 py-1 rounded-md hover:bg-slate-100">
+                Decision Log
+            </a>
+            <a href="{% url 'sessions_with_decisions' %}"
+                class="text-xs font-medium text-slate-600 hover:text-slate-900 transition px-2.5 py-1 rounded-md hover:bg-slate-100">
+                Active Sessions
+            </a>
+
             <!-- Settings -->
             <a href="{% url 'user_settings' %}"
                 class="flex items-center gap-1.5 text-xs text-slate-600 hover:text-slate-900 transition px-2 py-1 rounded-md hover:bg-slate-100">

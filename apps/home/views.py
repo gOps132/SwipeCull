@@ -2,6 +2,7 @@ import json
 from uuid import uuid4
 
 from django.contrib.auth.decorators import login_required
+from django.db.models import Subquery
 from django.http import HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -259,3 +260,44 @@ def finalize_session(request, session_id):
         'remaining': stats['remaining'],
         'total': stats['total'],
     })
+
+
+@login_required
+def decision_log(request):
+    """JOIN implementation: retrieve SwipeDecisions joined with MediaFile and CullSession."""
+    decisions = (
+        SwipeDecision.objects.filter(user=request.user)
+        .select_related('media_file', 'session')
+        .order_by('-decided_at', '-id')
+    )
+    return render(
+        request,
+        'home/decision_log.html',
+        {
+            'decisions': decisions,
+            'generated_sql': str(decisions.query),
+        },
+    )
+
+
+@login_required
+def sessions_with_decisions(request):
+    """SUBQUERY implementation: retrieve active CullSessions that have at least one SwipeDecision."""
+    session_ids = SwipeDecision.objects.filter(user=request.user).values('session_id')
+    sessions = (
+        CullSession.objects.filter(
+            user=request.user,
+            status='active',
+            id__in=Subquery(session_ids),
+        )
+        .select_related('drive_connection')
+        .order_by('-created_at')
+    )
+    return render(
+        request,
+        'home/sessions_with_decisions.html',
+        {
+            'sessions': sessions,
+            'generated_sql': str(sessions.query),
+        },
+    )

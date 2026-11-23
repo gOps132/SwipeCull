@@ -429,9 +429,21 @@ async function confirmFinalize() {
 }
 
 // ── Keyboard shortcuts ───────────────────────────────────────
+function toggleShortcutsModal() {
+    const modal = document.getElementById('shortcuts-modal');
+    if (modal) modal.classList.toggle('hidden');
+}
+
+function closeShortcutsModal() {
+    const modal = document.getElementById('shortcuts-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
 document.addEventListener('keydown', e => {
     const tag = e.target && e.target.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    if (e.key === '?') { e.preventDefault(); toggleShortcutsModal(); return; }
+    if (e.key === 'Escape') { closeShortcutsModal(); return; }
     if (e.key === 'ArrowLeft') handleDecision('trash');
     if (e.key === 'ArrowRight') handleDecision('keep');
     if ((e.key === 'z' || e.key === 'Z') && (e.metaKey || e.ctrlKey)) { e.preventDefault(); handleUndo(); }

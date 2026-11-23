@@ -254,3 +254,10 @@ class HomeSwipeFlowTests(TestCase):
         )
         self.assertRedirects(deleted, reverse('analytics'))
         self.assertFalse(CullSession.objects.filter(pk=created.id).exists())
+
+    def test_home_renders_shortcuts_modal_and_analytics_link(self):
+        self.client.force_login(self.user)
+        resp = self.client.get(reverse('home'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'shortcuts-modal')
+        self.assertContains(resp, reverse('analytics'))

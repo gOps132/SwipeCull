@@ -80,6 +80,12 @@
                 Active Sessions
             </a>
 
+            <!-- Shortcuts Help -->
+            <button type="button" onclick="toggleShortcutsModal()" title="Keyboard Shortcuts (?)"
+                class="w-7 h-7 rounded-md border border-slate-200 text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition flex items-center justify-center">
+                ?
+            </button>
+
             <!-- Settings -->
             <a href="{% url 'user_settings' %}"
                 class="flex items-center gap-1.5 text-xs text-slate-600 hover:text-slate-900 transition px-2 py-1 rounded-md hover:bg-slate-100">
@@ -487,6 +493,38 @@
                         class="flex-1 py-2 text-xs font-semibold rounded-lg bg-slate-900 hover:bg-slate-800 text-white transition">Create Session</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Keyboard Shortcuts Modal -->
+    <div id="shortcuts-modal" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="text-sm font-bold text-slate-900">Keyboard Shortcuts</h3>
+                <button type="button" onclick="closeShortcutsModal()" class="text-xs text-slate-400 hover:text-slate-700">Esc</button>
+            </div>
+            <div class="divide-y divide-slate-100 text-xs">
+                <div class="py-2 flex items-center justify-between">
+                    <span class="text-slate-600">Keep photo</span>
+                    <kbd class="px-2 py-0.5 bg-slate-100 border border-slate-200 rounded font-mono text-[11px]">&rarr;</kbd>
+                </div>
+                <div class="py-2 flex items-center justify-between">
+                    <span class="text-slate-600">Trash photo</span>
+                    <kbd class="px-2 py-0.5 bg-slate-100 border border-slate-200 rounded font-mono text-[11px]">&larr;</kbd>
+                </div>
+                <div class="py-2 flex items-center justify-between">
+                    <span class="text-slate-600">Undo last decision</span>
+                    <kbd class="px-2 py-0.5 bg-slate-100 border border-slate-200 rounded font-mono text-[11px]">&#8984;Z / Ctrl+Z</kbd>
+                </div>
+                <div class="py-2 flex items-center justify-between">
+                    <span class="text-slate-600">Toggle shortcuts help</span>
+                    <kbd class="px-2 py-0.5 bg-slate-100 border border-slate-200 rounded font-mono text-[11px]">?</kbd>
+                </div>
+            </div>
+            <button type="button" onclick="closeShortcutsModal()"
+                class="w-full py-2 text-xs font-semibold rounded-lg bg-slate-900 hover:bg-slate-800 text-white transition">
+                Got it
+            </button>
         </div>
     </div>
 

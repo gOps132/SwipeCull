@@ -1,16 +1,32 @@
 import csv
+from datetime import timedelta
 from decimal import Decimal
 import json
+import secrets
 from uuid import uuid4
 
+from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Q, Subquery, Sum
 from django.db.models.functions import Coalesce
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
+from .drive_service import (
+    DriveAPIError,
+    build_auth_url,
+    exchange_code_for_tokens,
+    fetch_drive_file_preview,
+    is_google_oauth_configured,
+    is_real_connection,
+    list_drive_folders,
+    sync_folder_files,
+    trash_drive_file,
+)
 from .models import CullSession, DriveConnection, MediaFile, SwipeDecision
 from .services import populate_demo_files
 
@@ -23,9 +39,11 @@ def _serialize_media_file(media_file):
         else media_file.get_file_type_display()
     )
     taken = media_file.taken_at.strftime('%b %d, %Y') if media_file.taken_at else 'Unknown date'
+    is_demo = media_file.drive_file_id.startswith('demo-')
+    src = media_file.thumbnail_url or '' if is_demo else reverse('drive_file_preview', args=[media_file.id])
     return {
         'id': media_file.id,
-        'src': media_file.thumbnail_url or '',
+        'src': src,
         'name': media_file.file_name,
         'size': f'{size_mb:.1f} MB',
         'dim': dim,
@@ -96,10 +114,13 @@ def _render_home(request, active_session=None):
             'finalize_url': f'/session/{active_session.id}/finalize/',
         }
 
-    drive_connection = (
-        active_session.drive_connection
-        if active_session is not None
-        else DriveConnection.objects.filter(user=request.user, is_active=True).first()
+    user_drive_connection = DriveConnection.objects.filter(
+        user=request.user,
+        provider='google_drive',
+        is_active=True,
+    ).first()
+    drive_connection = user_drive_connection or (
+        active_session.drive_connection if active_session is not None else None
     )
 
     return render(
@@ -109,6 +130,8 @@ def _render_home(request, active_session=None):
             'sessions': sessions,
             'active_session': active_session,
             'drive_connection': drive_connection,
+            'drive_connected': is_real_connection(user_drive_connection),
+            'google_oauth_configured': is_google_oauth_configured(),
             'session_data': session_data,
         },
     )
@@ -128,7 +151,47 @@ def session_detail(request, session_id):
 @login_required
 @require_POST
 def create_session(request):
-    folder_name = request.POST.get('folder_name', '').strip() or 'New Photo Session'
+    source = request.POST.get('source', 'demo').strip()
+    folder_name = (
+        request.POST.get('drive_folder_name', '').strip()
+        if source == 'google_drive'
+        else ''
+    ) or request.POST.get('folder_name', '').strip() or 'New Photo Session'
+
+    if source == 'google_drive':
+        drive_folder_id = request.POST.get('drive_folder_id', '').strip()
+        if not drive_folder_id:
+            messages.error(request, 'Please select a Google Drive folder to import.')
+            return redirect('home')
+
+        connection = DriveConnection.objects.filter(
+            user=request.user,
+            provider='google_drive',
+            is_active=True,
+        ).first()
+        if not is_real_connection(connection):
+            messages.error(request, 'Please connect your Google Drive account first.')
+            return redirect('home')
+
+        session = CullSession.objects.create(
+            user=request.user,
+            drive_connection=connection,
+            folder_name=folder_name[:255],
+            folder_id=drive_folder_id[:255],
+        )
+        try:
+            synced = sync_folder_files(connection, session, drive_folder_id)
+        except DriveAPIError as exc:
+            session.delete()
+            messages.error(request, f'Could not sync folder from Google Drive: {exc}')
+            return redirect('home')
+
+        if synced == 0:
+            messages.info(request, f'Imported "{session.folder_name}" — no image files found in this folder.')
+        else:
+            messages.success(request, f'Synced {synced} photo(s) from Google Drive folder "{session.folder_name}".')
+        return redirect('session_detail', session_id=session.id)
+
     valid_providers = {choice[0] for choice in DriveConnection.PROVIDER_CHOICES}
     provider = request.POST.get('provider', 'google_drive').strip()
     if provider not in valid_providers:
@@ -249,14 +312,28 @@ def finalize_session(request, session_id):
     ).select_related('media_file')
 
     trashed_files = [d.media_file for d in trashed_decisions]
-    deleted_count = len(trashed_files)
+    use_drive = is_real_connection(session.drive_connection)
+    trashed_to_delete = []
+    drive_errors = []
+
+    for mf in trashed_files:
+        if use_drive and not mf.drive_file_id.startswith('demo-'):
+            try:
+                trash_drive_file(session.drive_connection, mf.drive_file_id)
+                trashed_to_delete.append(mf)
+            except DriveAPIError as exc:
+                drive_errors.append(f'{mf.file_name}: {exc}')
+        else:
+            trashed_to_delete.append(mf)
+
+    deleted_count = len(trashed_to_delete)
     freed_mb = round(
-        sum(float(mf.file_size_mb) for mf in trashed_files if mf.file_size_mb is not None),
+        sum(float(mf.file_size_mb) for mf in trashed_to_delete if mf.file_size_mb is not None),
         2,
     )
 
-    if trashed_files:
-        MediaFile.objects.filter(id__in=[mf.id for mf in trashed_files]).delete()
+    if trashed_to_delete:
+        MediaFile.objects.filter(id__in=[mf.id for mf in trashed_to_delete]).delete()
 
     stats = _session_stats(session, request.user)
     session.total_files = stats['total']
@@ -271,6 +348,8 @@ def finalize_session(request, session_id):
         'ok': True,
         'deleted_count': deleted_count,
         'freed_mb': freed_mb,
+        'drive_synced': use_drive,
+        'drive_errors': drive_errors,
         'session_status': session.status,
         'kept_count': stats['kept_count'],
         'trashed_count': stats['trashed_count'],
@@ -427,3 +506,123 @@ def analytics_view(request):
             'overview': overview,
         },
     )
+
+
+def _get_google_redirect_uri(request):
+    configured = getattr(settings, 'GOOGLE_REDIRECT_URI', '')
+    return configured or request.build_absolute_uri(reverse('google_drive_callback'))
+
+
+@login_required
+def google_drive_connect(request):
+    """Redirect the user to Google OAuth consent screen for Drive access."""
+    if not is_google_oauth_configured():
+        messages.warning(
+            request,
+            'Google Drive OAuth is not configured yet. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env.',
+        )
+        return redirect('home')
+
+    state = secrets.token_urlsafe(24)
+    request.session['google_oauth_state'] = state
+    auth_url = build_auth_url(_get_google_redirect_uri(request), state)
+    return redirect(auth_url)
+
+
+@login_required
+def google_drive_callback(request):
+    """Handle Google OAuth2 callback and persist tokens in DriveConnection."""
+    error = request.GET.get('error')
+    if error:
+        messages.error(request, f'Google Drive authorization was cancelled or failed ({error}).')
+        return redirect('home')
+
+    expected_state = request.session.pop('google_oauth_state', None)
+    received_state = request.GET.get('state')
+    if not expected_state or expected_state != received_state:
+        messages.error(request, 'Invalid OAuth state parameter. Please try connecting Google Drive again.')
+        return redirect('home')
+
+    code = request.GET.get('code')
+    if not code:
+        messages.error(request, 'Missing authorization code from Google.')
+        return redirect('home')
+
+    try:
+        tokens = exchange_code_for_tokens(code, _get_google_redirect_uri(request))
+    except DriveAPIError as exc:
+        messages.error(request, f'Failed to connect Google Drive: {exc}')
+        return redirect('home')
+
+    expires_in = int(tokens.get('expires_in', 3600))
+    expiry = timezone.now() + timedelta(seconds=expires_in)
+
+    existing = DriveConnection.objects.filter(user=request.user, provider='google_drive').first()
+    refresh_token = tokens.get('refresh_token') or (existing.refresh_token if existing else '')
+
+    DriveConnection.objects.update_or_create(
+        user=request.user,
+        provider='google_drive',
+        defaults={
+            'access_token': tokens['access_token'],
+            'refresh_token': refresh_token,
+            'token_expiry': expiry,
+            'is_active': True,
+        },
+    )
+    messages.success(request, 'Google Drive connected! Click "+ New" to import a Drive folder.')
+    return redirect('home')
+
+
+@login_required
+@require_POST
+def google_drive_disconnect(request):
+    """Disconnect the user's Google Drive OAuth tokens."""
+    DriveConnection.objects.filter(user=request.user, provider='google_drive').update(
+        is_active=False,
+        access_token='',
+        refresh_token='',
+        token_expiry=None,
+    )
+    messages.info(request, 'Google Drive disconnected.')
+    return redirect('home')
+
+
+@login_required
+def google_drive_folders(request):
+    """Return the user's Google Drive folders as JSON for the folder picker."""
+    connection = DriveConnection.objects.filter(
+        user=request.user,
+        provider='google_drive',
+        is_active=True,
+    ).first()
+    if not is_real_connection(connection):
+        return JsonResponse({'ok': False, 'error': 'Google Drive is not connected.'}, status=400)
+
+    try:
+        folders = list_drive_folders(connection)
+    except DriveAPIError as exc:
+        return JsonResponse({'ok': False, 'error': str(exc)}, status=502)
+
+    return JsonResponse({'ok': True, 'folders': folders})
+
+
+@login_required
+def drive_file_preview(request, media_file_id):
+    """Proxy an image preview from Google Drive using the user's OAuth token."""
+    media_file = get_object_or_404(MediaFile, pk=media_file_id, session__user=request.user)
+    if media_file.drive_file_id.startswith('demo-') and media_file.thumbnail_url:
+        return redirect(media_file.thumbnail_url)
+
+    connection = media_file.session.drive_connection
+    if not is_real_connection(connection):
+        return HttpResponse('Google Drive connection is not active.', status=401)
+
+    try:
+        content, content_type = fetch_drive_file_preview(connection, media_file.drive_file_id)
+    except DriveAPIError as exc:
+        return HttpResponse(str(exc), status=502)
+
+    response = HttpResponse(content, content_type=content_type)
+    response['Cache-Control'] = 'private, max-age=300'
+    return response

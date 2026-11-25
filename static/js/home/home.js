@@ -369,12 +369,83 @@ function closeModal() {
 }
 
 // ── New session modal ────────────────────────────────────────
+let driveFoldersLoaded = false;
+
+function setNewSessionSource(source) {
+    const sourceInput = document.getElementById('new-session-source');
+    const driveFields = document.getElementById('drive-source-fields');
+    const demoFields = document.getElementById('demo-source-fields');
+    const tabDrive = document.getElementById('tab-source-drive');
+    const tabDemo = document.getElementById('tab-source-demo');
+    const folderSelect = document.getElementById('drive-folder-select');
+    const folderNameInput = document.getElementById('new-folder-name');
+
+    if (sourceInput) sourceInput.value = source;
+    if (source === 'google_drive') {
+        if (driveFields) driveFields.classList.remove('hidden');
+        if (demoFields) demoFields.classList.add('hidden');
+        if (tabDrive) tabDrive.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 text-white transition';
+        if (tabDemo) tabDemo.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg text-slate-600 hover:bg-slate-100 transition';
+        if (folderSelect) folderSelect.required = true;
+        if (folderNameInput) folderNameInput.required = false;
+        loadDriveFolders();
+    } else {
+        if (driveFields) driveFields.classList.add('hidden');
+        if (demoFields) demoFields.classList.remove('hidden');
+        if (tabDemo) tabDemo.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 text-white transition';
+        if (tabDrive) tabDrive.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg text-slate-600 hover:bg-slate-100 transition';
+        if (folderSelect) folderSelect.required = false;
+        if (folderNameInput) folderNameInput.required = true;
+    }
+}
+
+async function loadDriveFolders() {
+    const select = document.getElementById('drive-folder-select');
+    const status = document.getElementById('drive-folders-status');
+    const hiddenName = document.getElementById('drive-folder-name');
+    if (!select || driveFoldersLoaded) return;
+
+    if (status) status.textContent = 'Loading your Google Drive folders…';
+    try {
+        const resp = await fetch('/drive/folders/');
+        const data = await resp.json();
+        if (!resp.ok || !data.ok) {
+            if (status) status.textContent = data.error || 'Failed to load folders.';
+            return;
+        }
+        select.innerHTML = '';
+        data.folders.forEach(folder => {
+            const opt = document.createElement('option');
+            opt.value = folder.id;
+            opt.textContent = folder.name;
+            select.appendChild(opt);
+        });
+        if (data.folders.length > 0 && hiddenName) {
+            hiddenName.value = data.folders[0].name;
+        }
+        select.onchange = () => {
+            if (hiddenName && select.selectedOptions[0]) {
+                hiddenName.value = select.selectedOptions[0].textContent;
+            }
+        };
+        driveFoldersLoaded = true;
+        if (status) status.textContent = `${data.folders.length} folder(s) available`;
+    } catch {
+        if (status) status.textContent = 'Network error loading Drive folders.';
+    }
+}
+
 function openNewSessionModal() {
     const modal = document.getElementById('new-session-modal');
     if (modal) {
         modal.classList.remove('hidden');
-        const input = document.getElementById('new-folder-name');
-        if (input) input.focus();
+        const folderSelect = document.getElementById('drive-folder-select');
+        if (folderSelect) {
+            setNewSessionSource('google_drive');
+        } else {
+            const input = document.getElementById('new-folder-name');
+            if (input) input.focus();
+        }
     }
 }
 function closeNewSessionModal() {
@@ -418,7 +489,12 @@ async function confirmFinalize() {
             if (btnUndo) btnUndo.disabled = history.length === 0;
             updateUI();
             if (res.remaining === 0) showDoneState();
-            showToast(`Cleanup complete: ${res.deleted_count} file${res.deleted_count !== 1 ? 's' : ''} removed (${res.freed_mb.toFixed(1)} MB freed).`);
+            const targetLabel = res.drive_synced ? 'moved to Google Drive Trash' : 'removed';
+            if (res.drive_errors && res.drive_errors.length > 0) {
+                showToast(`Cleaned ${res.deleted_count} file(s), but ${res.drive_errors.length} Drive error(s) occurred.`);
+            } else {
+                showToast(`Cleanup complete: ${res.deleted_count} file${res.deleted_count !== 1 ? 's' : ''} ${targetLabel} (${res.freed_mb.toFixed(1)} MB freed).`);
+            }
         } finally {
             pendingRequest = false;
         }

@@ -13,4 +13,9 @@ urlpatterns = [
     path('session/<int:session_id>/decide/', views.decide_file, name='decide_file'),
     path('session/<int:session_id>/undo/', views.undo_decision, name='undo_decision'),
     path('session/<int:session_id>/finalize/', views.finalize_session, name='finalize_session'),
+    path('drive/connect/', views.google_drive_connect, name='google_drive_connect'),
+    path('drive/callback/', views.google_drive_callback, name='google_drive_callback'),
+    path('drive/disconnect/', views.google_drive_disconnect, name='google_drive_disconnect'),
+    path('drive/folders/', views.google_drive_folders, name='google_drive_folders'),
+    path('drive/file/<int:media_file_id>/preview/', views.drive_file_preview, name='drive_file_preview'),
 ]
